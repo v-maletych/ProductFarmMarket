@@ -1,0 +1,39 @@
+# IDE-specific directories and files
+.idea/                     # IntelliJ IDEA
+.vscode/                   # Visual Studio Code
+
+# Java and Maven/Gradle
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/wrapper/maven-wrapper.jar
+
+### Gradle ###
+.gradle/
+build/
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# Log and data files
+*.log
+log/
+tmp/
+
+# OS-specific files
+.DS_Store                   # macOS
+Thumbs.db                   # Windows
+.localized
+
+# Other temporary files
+*.iml                       # IDE project files
+*.class
+/out/
