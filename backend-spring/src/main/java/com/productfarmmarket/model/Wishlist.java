@@ -3,9 +3,11 @@ package com.productfarmmarket.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "wishlist")
 public class Wishlist {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "wishList_id")
     private Long wishlistId;
 
     @ManyToOne

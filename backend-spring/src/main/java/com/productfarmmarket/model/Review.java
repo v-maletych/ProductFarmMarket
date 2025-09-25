@@ -7,9 +7,11 @@ import java.security.Timestamp;
 import java.util.Date;
 
 @Entity
+@Table(name = "reviews")
 public class Review {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "review_id")
     private Long reviewId;
 
     @ManyToOne

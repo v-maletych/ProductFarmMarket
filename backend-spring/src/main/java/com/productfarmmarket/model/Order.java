@@ -6,9 +6,11 @@ import jakarta.persistence.*;
 import java.security.Timestamp;
 
 @Entity
+@Table(name = "orders")
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "order_id")
     private Long orderId;
 
     @ManyToOne
