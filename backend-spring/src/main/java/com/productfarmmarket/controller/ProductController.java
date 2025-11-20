@@ -1,17 +1,18 @@
 package com.productfarmmarket.controller;
 
 import com.productfarmmarket.model.Product;
-import com.productfarmmarket.model.User; // Імпорт
+import com.productfarmmarket.model.User;
 import com.productfarmmarket.repository.ProductRepository;
-import com.productfarmmarket.repository.UserRepository; // Імпорт
-import com.productfarmmarket.dto.ProductResponse; // Якщо у вас є ProductResponse DTO
+import com.productfarmmarket.repository.UserRepository;
+import com.productfarmmarket.dto.ProductResponse; // <-- ТЕПЕР ПРАЦЮЄ
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication; // Імпорт
-import org.springframework.security.core.context.SecurityContextHolder; // Імпорт
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors; // <-- ДОДАЄМО ІМПОРТ
 
 @RestController
 @RequestMapping("/api/products")
@@ -21,18 +22,20 @@ public class ProductController {
     private ProductRepository productRepository;
 
     @Autowired
-    private UserRepository userRepository; // <-- ДОДАНО ДЛЯ ЗНАХОДЖЕННЯ ПОТОЧНОГО КОРИСТУВАЧА
+    private UserRepository userRepository;
 
-    // Отримання всіх продуктів - ДОСТУПНО УСІМ
+    // Отримання всіх продуктів - ПОВЕРТАЄМО DTO
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream()
+                .map(ProductResponse::new)
+                .collect(Collectors.toList());
     }
 
-    // Створення продукту - FARMER та ADMIN
+    // Створення продукту - ПОВЕРТАЄМО DTO
     @PostMapping
     @PreAuthorize("hasAnyAuthority('FARMER', 'ADMIN')")
-    public Product createProduct(@RequestBody Product product) {
+    public ProductResponse createProduct(@RequestBody Product product) {
 
         // --- ЛОГІКА ВСТАНОВЛЕННЯ ВЛАСНИКА ---
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -44,23 +47,24 @@ public class ProductController {
         product.setUser(currentUser); // Встановлюємо поточного користувача як власника
         // --- КІНЕЦЬ ЛОГІКИ ---
 
-        return productRepository.save(product);
+        return new ProductResponse(productRepository.save(product));
     }
 
-    // Отримання продукту за ID - ДОСТУПНО УСІМ
+    // Отримання продукту за ID - ПОВЕРТАЄМО DTO
     @GetMapping("/{id}")
-    public Product getProductById(@PathVariable Long id) {
-        return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+    public ProductResponse getProductById(@PathVariable Long id) {
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        return new ProductResponse(product);
     }
 
-    // Оновлення продукту - АДМІН АБО ВЛАСНИК
+    // Оновлення продукту - ПОВЕРТАЄМО DTO
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or @productOwnershipService.isOwner(#id, principal.userId)")
-    public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
+    public ProductResponse updateProduct(@PathVariable Long id, @RequestBody Product product) {
         Product existingProduct = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
-        // Перевіряємо, чи користувач намагається змінити власника. Якщо так, це робить лише ADMIN
+
+        // Логіка перевірки зміни власника (залишаємо для ADMIN)
         if (product.getUser() != null && !product.getUser().getUserId().equals(existingProduct.getUser().getUserId())) {
-            // Додаткова перевірка, щоб не змінювати власника, якщо це не Admin
             if (!SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
                 throw new RuntimeException("Only ADMIN can change product ownership.");
@@ -72,10 +76,10 @@ public class ProductController {
         existingProduct.setPrice(product.getPrice());
         existingProduct.setInStock(product.getInStock());
 
-        return productRepository.save(existingProduct);
+        return new ProductResponse(productRepository.save(existingProduct));
     }
 
-    // Видалення продукту - АДМІН АБО ВЛАСНИК
+    // Видалення продукту
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or @productOwnershipService.isOwner(#id, principal.userId)")
     public void deleteProduct(@PathVariable Long id) {
