@@ -3,6 +3,7 @@ package com.productfarmmarket.controller;
 import com.productfarmmarket.model.Review;
 import com.productfarmmarket.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,26 +15,29 @@ public class ReviewController {
     @Autowired
     private ReviewRepository reviewRepository;
 
-    // get all the reviews
+    // Отримання всіх відгуків - ДОСТУПНО УСІМ (Публічні дані)
     @GetMapping
     public List<Review> getAllReviews() {
         return reviewRepository.findAll();
     }
 
-    // add new review
+    // Додавання нового відгуку - ЛИШЕ АВТЕНТИФІКОВАНИЙ
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public Review createReview(@RequestBody Review review) {
+        // УВАГА: Тут має бути логіка встановлення поточного користувача як автора!
         return reviewRepository.save(review);
     }
 
-    // get review via id
+    // Отримання відгуку за ID - ДОСТУПНО УСІМ
     @GetMapping("/{id}")
     public Review getReviewById(@PathVariable Long id) {
         return reviewRepository.findById(id).orElseThrow(() -> new RuntimeException("Review not found"));
     }
 
-    // update review
+    // Оновлення відгуку - АДМІН АБО ВЛАСНИК
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @reviewOwnershipService.isOwner(#id, principal.userId)")
     public Review updateReview(@PathVariable Long id, @RequestBody Review review) {
         Review existingReview = reviewRepository.findById(id).orElseThrow(() -> new RuntimeException("Review not found"));
         existingReview.setRaiting(review.getRaiting());
@@ -41,8 +45,9 @@ public class ReviewController {
         return reviewRepository.save(existingReview);
     }
 
-    // delete review
+    // Видалення відгуку - АДМІН АБО ВЛАСНИК
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @reviewOwnershipService.isOwner(#id, principal.userId)")
     public void deleteReview(@PathVariable Long id) {
         Review review = reviewRepository.findById(id).orElseThrow(() -> new RuntimeException("Review not found"));
         reviewRepository.delete(review);
