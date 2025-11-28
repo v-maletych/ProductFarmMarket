@@ -1,24 +1,67 @@
-# Logs
-logs
+# =======================================================
+# 1. ФАЙЛИ, ЩО ГЕНЕРУЮТЬСЯ (ЗАГАЛЬНІ ПРАВИЛА)
+# =======================================================
+
+# 1.1. Скомпільовані Java/Maven (Backend)
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# 1.2. Скомпільовані Node/React (Frontend)
+**/node_modules/
+**/build/
+**/dist/
+npm-debug.log
+yarn-error.log
+.cache/
+.eslintcache
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# 1.3. Секрети та конфігурація
+.env
+.env.local
+
+# -------------------------------------------------------
+# 2. СПЕЦИФІЧНІ ФАЙЛИ IDE та ОС
+# -------------------------------------------------------
+
+### IntelliJ IDEA
+.idea/
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS та Windows ###
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
