@@ -11,8 +11,14 @@ const API_URL = '/api/auth'; // Базовий URL для аутентифіка
 // 1. КОМПОНЕНТ РЕЄСТРАЦІЇ
 // ----------------------------------------------------------------------
 const RegisterForm = () => {
-    // Додано lastName та numberPhone, як очікує бекенд DTO
-    const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', numberPhone: '' });
+    // ВАЖЛИВО: Стан має включати всі поля DTO (lastName, numberPhone)
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        numberPhone: ''
+    });
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
@@ -52,18 +58,60 @@ const RegisterForm = () => {
             <h2 className="text-3xl font-bold text-green-600">Реєстрація</h2>
             {error && <p className="bg-red-100 text-red-600 p-3 rounded-lg text-sm">{error}</p>}
 
-            {/* ПІБ, Телефон, Email, Пароль */}
-            {['firstName', 'lastName', 'numberPhone', 'email', 'password'].map(field => (
-                <input
-                    key={field}
-                    type={field.includes('password') ? 'password' : field.includes('email') ? 'email' : 'text'}
-                    name={field}
-                    required
-                    className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
-                    placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                    onChange={handleChange}
-                />
-            ))}
+            {/* Ім'я */}
+            <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                placeholder="Ім'я"
+            />
+
+            {/* Прізвище (ВИПРАВЛЕНО: Додано коректний input) */}
+            <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                placeholder="Прізвище"
+            />
+
+            {/* Номер телефону (ВИПРАВЛЕНО: Додано коректний input) */}
+            <input
+                type="text"
+                name="numberPhone"
+                value={formData.numberPhone}
+                onChange={handleChange}
+                required
+                className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                placeholder="Номер телефону"
+            />
+
+            {/* Email */}
+            <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                placeholder="Email"
+            />
+
+            {/* Пароль */}
+            <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                placeholder="Пароль"
+            />
 
             <button
                 type="submit"
@@ -77,14 +125,14 @@ const RegisterForm = () => {
 };
 
 // ----------------------------------------------------------------------
-// 2. КОМПОНЕНТ ВХОДУ
+// 2. КОМПОНЕНТ ВХОДУ (Залишається без змін, оскільки він коректний)
 // ----------------------------------------------------------------------
 const LoginForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { login } = useUser(); // <-- Функція login з контексту
+    const { login } = useUser();
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from || { pathname: "/profile" };
@@ -95,7 +143,7 @@ const LoginForm = () => {
         setIsSubmitting(true);
 
         try {
-            // 1. POST /api/auth/authenticate
+            // POST /api/auth/authenticate
             const response = await baseClient.post(`${API_URL}/authenticate`, { email, password });
 
             // 2. Зберігаємо токен у контекст і стейт
@@ -153,11 +201,9 @@ const LoginForm = () => {
 // ----------------------------------------------------------------------
 function Auth() {
     const location = useLocation();
-    // Перевіряємо URL для перемикання форми
     const isLoginMode = location.pathname === '/login';
     const { authData } = useUser();
 
-    // Якщо користувач вже увійшов
     if (authData.isAuthenticated) {
         return <div className="text-center p-10">
             <h2 className="text-2xl font-bold">Ви вже увійшли!</h2>
@@ -169,7 +215,6 @@ function Auth() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
             <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
 
-                {/* КНОПКИ-ПЕРЕМИКАЧІ */}
                 <div className="flex justify-center mb-6 border-b">
                     <Link to="/login"
                           className={`flex-1 py-2 rounded-md text-sm font-bold text-center transition duration-300 ${isLoginMode ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-green-600'}`}

@@ -1,5 +1,6 @@
 package com.productfarmmarket.jwt;
 
+import com.productfarmmarket.model.User; // <--- ДОДАНО: Для отримання ID користувача
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -24,8 +25,17 @@ public class JwtService {
     @Value("${application.security.jwt.expiration}")
     private long jwtExpiration;
 
+    // ВИПРАВЛЕНО: Додано логіку для вкладення userId в Claims
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> extraClaims = new HashMap<>();
+
+        // КРИТИЧНЕ ВИПРАВЛЕННЯ: Додаємо ID користувача (який є Long)
+        // Це необхідно для того, щоб фронтенд міг завантажити профіль користувача
+        if (userDetails instanceof User) {
+            extraClaims.put("userId", ((User) userDetails).getUserId());
+        }
+
+        return generateToken(extraClaims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {

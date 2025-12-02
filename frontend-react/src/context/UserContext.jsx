@@ -1,7 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import jwtDecode from 'jwt-decode';
-import { getAxiosClient, baseClient } from '../api/axiosClient';
+import { jwtDecode } from 'jwt-decode';
+import { getAxiosClient } from '../api/axiosClient';
+import baseClient from '../api/axiosClient';
+import { Navigate } from 'react-router-dom';
 
 // 1. Створюємо контекст
 const UserContext = createContext();
@@ -17,21 +19,32 @@ export const UserProvider = ({ children }) => {
     // Функція для запитів до захищених ендпоінтів
     const getClient = () => getAxiosClient();
 
-    // --- ЛОГІКА ЗАВАНТАЖЕННЯ ДАНИХ ПРОФІЛЮ (DTO) ---
+    // 3. Логіка виходу
+    const logout = useCallback(() => {
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('userProfile');
+        setUserProfile(null);
+        setAuthData({ token: null, isAuthenticated: false, role: null, userId: null });
+        toast.success('Ви успішно вийшли з акаунту.');
+    }, []);
 
-    // Функція для завантаження User DTO (профілю)
-    const fetchUserProfile = async (token) => {
+    // --- ЛОГІКА ЗАВАНТАЖЕННЯ ДАНИХ ПРОФІЛЮ (DTO) ---
+    // **********************************************
+    // 💡 КРИТИЧНЕ ВИПРАВЛЕННЯ: Ізолюємо logout, щоб він не спрацьовував при кожній помилці 500/403
+    // **********************************************
+    const fetchUserProfile = useCallback(async (token) => {
+        // У цьому місці ми НЕ викликаємо logout(), щоб не потрапити у цикл
+        // (logout викликається тільки в перехоплювачі Axios)
         try {
             const client = getClient();
             const decoded = jwtDecode(token);
-            const userId = decoded.userId; // Припускаємо, що ви додали userId в JWT клейми
+            const userId = decoded.userId;
 
             // GET /api/users/{userId} - Захищений ендпоінт
-            const response = await client.get(`/users/${userId}`);
+            const response = await client.get(`/api/users/${userId}`);
 
             const profileData = response.data;
 
-            // УВАГА: Ми об'єднуємо DTO з мок-даними UI (bannerColor, etc.), оскільки їх немає в БД
             const finalProfile = {
                 ...profileData,
                 // Мок-поля:
@@ -48,38 +61,43 @@ export const UserProvider = ({ children }) => {
 
         } catch (error) {
             console.error("Помилка завантаження профілю:", error);
-            // Якщо не вдалося завантажити профіль, робимо вихід
-            logout();
+            // Видалено: logout(); // 🛑 Тепер logout() відбувається в axiosClient.js interceptor
         }
-    };
+    }, []); // Тепер немає залежності від logout, оскільки ми його не викликаємо тут
 
-    // 3. Логіка виходу (включає logout з AuthContext)
-    const logout = () => {
-        localStorage.removeItem('jwtToken');
-        localStorage.removeItem('userProfile');
-        setUserProfile(null);
-        setAuthData({ token: null, isAuthenticated: false, role: null, userId: null });
-        toast.success('Ви успішно вийшли з акаунту');
-    };
 
-    // Функція оновлення профілю (PUT) - викликається з Profile.jsx
+    // Функція оновлення профілю (PUT)
     const updateUserProfile = async (updatedDto) => {
         try {
             const client = getClient();
             const userId = authData.userId;
 
             // PUT /api/users/{userId}
-            await client.put(`/users/${userId}`, updatedDto);
+            await client.put(`/api/users/${userId}`, updatedDto);
 
-            // Оновлюємо локальний стейт, завантажуючи DTO заново
-            await fetchUserProfile(authData.token);
+            // **********************************************
+            // ✅ КРИТИЧНЕ ВИПРАВЛЕННЯ: ВИКОНАЙТЕ АВТОМАТИЧНЕ ОНОВЛЕННЯ КОНТЕКСТУ
+            // **********************************************
 
-            toast.success('Профіль оновлено успішно!');
-            return true;
+            // Якщо PUT успішний, ми ЗНОВУ завантажуємо профіль.
+            // Ми ізолюємо цей виклик, щоб він не викликав помилку в catch блоці нижче
+            // і не маскував успіх PUT-запиту.
+            const updatedProfile = await fetchUserProfile(authData.token);
+
+            if (updatedProfile) {
+                toast.success('Профіль оновлено успішно!');
+                return true;
+            } else {
+                // Якщо PUT був успішним, але fetchUserProfile провалився
+                toast.warn("Профіль оновлено, але для відображення змін може знадобитися оновити сторінку.");
+                return true; // Вважаємо успіхом, оскільки дані оновлено
+            }
 
         } catch (error) {
-            toast.error("Не вдалося оновити профіль. Перевірте дані.");
-            console.error("Update profile error:", error);
+            // ЦЕЙ БЛОК ВИКОНУЄТЬСЯ, ЯКЩО САМ PUT-ЗАПИТ ПРОВАЛИТЬСЯ (400, 403, 500)
+            const backendMessage = error.response?.data?.message || 'Невідома помилка.';
+            toast.error(`Не вдалося оновити профіль: ${backendMessage}`);
+            console.error("Update profile error:", error.response || error);
             return false;
         }
     }
@@ -105,18 +123,22 @@ export const UserProvider = ({ children }) => {
 
                     if (profile) {
                         setUserProfile(JSON.parse(profile));
-                    } else {
-                        fetchUserProfile(token);
                     }
+
+                    // Завантажуємо свіжі дані при кожному запуску (завжди)
+                    fetchUserProfile(token);
+
                 } else {
                     logout();
                 }
             } catch (e) {
+                // Якщо токен недійсний або пошкоджений
                 logout();
             }
         }
         setIsLoading(false);
-    }, []);
+    }, [logout, fetchUserProfile]);
+
 
     // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
 
@@ -132,9 +154,9 @@ export const UserProvider = ({ children }) => {
             token, isAuthenticated: true, role, userId,
         });
 
-        // Запускаємо завантаження профілю DTO
+        // Запускаємо завантаження профілю
         fetchUserProfile(token);
-        toast.success(`Вітаємо! Ваша роль: ${role}`); // Тост про успішний вхід
+        toast.success(`Вітаємо! Ваша роль: ${role}`);
     };
 
     // Допоміжна функція для перевірки ролі
@@ -146,35 +168,26 @@ export const UserProvider = ({ children }) => {
 
     // --- ЛОГІКА WISHLIST, ORDERS (API MOCK) ---
 
-    // Логіка додавання/видалення з Wishlist
     const toggleWishlist = async (product) => {
         if (!authData.isAuthenticated) {
             toast.error("Увійдіть, щоб додати в обране");
             return;
         }
-
-        // Тут має бути логіка API, яка звертається до /api/wishlist
         toast("Логіка API Wishlist працює (MOCK)", { icon: '❤️' });
     };
 
-    // Логіка замовлень (POST)
     const addOrderToHistory = (orderData) => {
         if (!authData.isAuthenticated) return;
-        // Тут має бути POST /api/orders
         toast.error("Замовлення збережено (МОК API)");
     };
 
-    // Логіка очищення історії
     const clearOrderHistory = () => {
         if (window.confirm("Видалити всю історію замовлень?")) {
-            // Тут має бути DELETE /api/orders/user/{userId}
             toast.error('Історія очищена (МОК API)');
         }
     };
 
-    // Логіка видалення одного замовлення
     const deleteOrder = (orderId) => {
-        // Тут має бути DELETE /api/orders/{orderId}
         toast.error('Замовлення видалено (МОК API)');
     };
 
@@ -187,6 +200,7 @@ export const UserProvider = ({ children }) => {
             login,
             logout,
             hasRole,
+            fetchUserProfile, // Тепер експортуємо для використання поза контекстом, якщо потрібно
             updateUserProfile,
             toggleWishlist,
             addOrderToHistory,

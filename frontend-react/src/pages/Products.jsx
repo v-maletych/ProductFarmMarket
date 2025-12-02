@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { getAxiosClient } from '../api/axiosClient'; // <-- Клієнт для API
+import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
-// 🇺🇦 СЛОВНИК ПІДКАТЕГОРІЙ (Мок-дані для відображення, поки не буде реального API підкатегорій)
-// У реальному застосунку, ці переклади варто зберігати на бекенді або в окремому JSON
 const MOCK_SUBCAT_TRANSLATIONS = {
-    // Ці дані потрібно отримати з бекенду, але для відображення UI поки використовуємо мок
     apples: "🍎 Яблука", pears: "🍐 Груші", tomatoes: "🍅 Томати",
     potatoes: "🥔 Картопля", meat: "🥩 М'ясо", eggs: "🥚 Яйця",
     all: "📦 Всі товари"
@@ -17,11 +14,9 @@ const Products = () => {
     const { categoryName } = useParams();
     const client = getAxiosClient();
 
-    // Стан для даних, отриманих з API
     const [allProducts, setAllProducts] = useState([]);
     const [categories, setCategories] = useState([]);
 
-    // Стан UI
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeSubcategory, setActiveSubcategory] = useState('all');
@@ -33,12 +28,12 @@ const Products = () => {
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                // Завантажуємо продукти
-                const productsRes = await client.get('/products');
+                // ВИПРАВЛЕНО: Додано префікс /api
+                const productsRes = await client.get('/api/products');
                 setAllProducts(productsRes.data);
 
-                // Завантажуємо категорії
-                const categoriesRes = await client.get('/categories');
+                // ВИПРАВЛЕНО: Додано префікс /api
+                const categoriesRes = await client.get('/api/categories');
                 setCategories(categoriesRes.data);
 
                 setError(null);
@@ -51,40 +46,22 @@ const Products = () => {
             }
         };
 
-        // Запускаємо завантаження
         fetchAllData();
     }, []);
-    // Викликається лише один раз при першому завантаженні компонента
 
-    // Скидання фільтрів при зміні URL категорії
     useEffect(() => {
         setActiveSubcategory('all');
         setSortOption('default');
     }, [categoryName]);
 
-    // ------------------------------------------------------------------
-    // 2. ФІЛЬТРАЦІЯ ТА СОРТУВАННЯ (Логіка на фронтенді)
-    // ------------------------------------------------------------------
     const processedProducts = useMemo(() => {
         let result = [...allProducts];
 
-        // Фільтр 1: Поточна категорія (за URL)
         if (categoryName) {
-            // Припускаємо, що DTO продукту містить поле 'categoryName'
             result = result.filter(p => p.category?.name?.toLowerCase() === categoryName.toLowerCase());
         }
 
-        // Фільтр 2: Підкатегорія (цей фільтр є мок-фільтром, оскільки на бекенді немає 'subcategory')
-        // Тут ми залишаємо його для прикладу:
-        /*
-        if (activeSubcategory !== 'all' && activeSubcategory !== '') {
-            result = result.filter(p => p.subcategory?.toLowerCase() === activeSubcategory.toLowerCase());
-        }
-        */
-
-        // Сортування
         if (sortOption === 'cheap') {
-            // Сортування за ціною (поле 'price' з DTO)
             result.sort((a, b) => a.price - b.price);
         } else if (sortOption === 'expensive') {
             result.sort((a, b) => b.price - a.price);
@@ -95,19 +72,9 @@ const Products = () => {
         return result;
     }, [allProducts, categoryName, activeSubcategory, sortOption]);
 
-    // Визначаємо доступні підкатегорії (для мок-кнопок)
     const availableSubcategories = useMemo(() => {
-        // Якщо у вас буде реальне поле subcategory в DTO, тут буде логіка:
-        // const subs = mainCategoryProducts.map(p => p.subcategory).filter(Boolean);
-        // return ['all', ...new Set(subs)];
-        // Наразі повертаємо мок-дані
         return ['all', 'apples', 'tomatoes'];
     }, [processedProducts]);
-
-
-    // ------------------------------------------------------------------
-    // 3. UI ТА ВІДОБРАЖЕННЯ
-    // ------------------------------------------------------------------
 
     const getCategoryTitle = (slug) => {
         if (!slug) return 'Весь Каталог';
@@ -130,7 +97,6 @@ const Products = () => {
         <div className="container mx-auto px-4 py-8">
             <div className="flex flex-col md:flex-row gap-8">
 
-                {/* ASIDE: Навігація категорій */}
                 <aside className="hidden md:block w-1/4 sticky top-24 h-[calc(100vh-120px)]">
                     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 h-full flex flex-col">
                         <h3 className="text-xl font-bold mb-4 text-gray-800 shrink-0">Відділи</h3>
@@ -141,13 +107,11 @@ const Products = () => {
                                 </Link>
                             </li>
                             {categories.map(cat => {
-                                // Ми повинні використовувати slug або ID
                                 const slug = cat.name?.toLowerCase();
                                 const isActive = categoryName === slug;
                                 return (
                                     <li key={cat.categoryId}>
                                         <Link to={`/products/${slug}`} className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${isActive ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                            {/* cat.image тут недоступний, використовуємо заглушку */}
                                             <div className="w-6 h-6 rounded-full bg-gray-200 object-cover flex items-center justify-center text-sm">C</div>
                                             <span className="font-medium">{cat.name}</span>
                                         </Link>
@@ -164,7 +128,6 @@ const Products = () => {
                             {getCategoryTitle(categoryName)}
                         </h1>
 
-                        {/* ВИПАДАЮЧИЙ СПИСОК СОРТУВАННЯ */}
                         <select
                             value={sortOption}
                             onChange={(e) => setSortOption(e.target.value)}
@@ -198,7 +161,6 @@ const Products = () => {
                     {processedProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {processedProducts.map(product => (
-                                // product.productId - тепер ID з БД, а не мок-id
                                 <ProductCard key={product.productId} product={product} />
                             ))}
                         </div>
@@ -214,7 +176,6 @@ const Products = () => {
                     )}
                 </main>
             </div>
-            {/* Стилі для кастомного скролбару */}
             <style>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4ade80; }`}</style>
         </div>
     );

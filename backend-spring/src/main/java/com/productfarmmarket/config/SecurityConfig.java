@@ -13,6 +13,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -30,36 +31,35 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. Налаштування CORS для React
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // 2. Вимкнення CSRF (потрібно для stateless API)
                 .csrf(csrf -> csrf.disable())
 
-                // 3. Правила авторизації
+                // === КРИТИЧНЕ ВИПРАВЛЕННЯ: Дозволяємо публічні шляхи ===
                 .authorizeHttpRequests(auth -> auth
-                        // Дозволити вільний доступ до ендпоїнтів аутентифікації
+                        // 1. Аутентифікація: /api/auth/**
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Захистити всі інші ендпоїнти
+                        // 2. Публічні дані каталогу: GET /api/products, /api/categories, /api/reviews
+                        .requestMatchers("/api/products", "/api/products/**",
+                                "/api/categories", "/api/categories/**",
+                                "/api/reviews").permitAll()
+                        // 3. Усі інші запити вимагають аутентифікації
                         .anyRequest().authenticated()
                 )
 
-                // 4. Управління сесіями: Встановлюємо STATELESS для JWT
+                // === КРИТИЧНЕ ВИПРАВЛЕННЯ: Сесія та JWT ===
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // 5. Додавання провайдера аутентифікації та JWT-фільтра
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Налаштування CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Вказуємо домен і порт, з якого працюватиме React-фронтенд
-        configuration.addAllowedOrigin("http://localhost:3000");
+        // ДОЗВОЛЕНО ДЛЯ DOCKER/LOCALHOST FIX
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost", "http://localhost:3000"));
+
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);

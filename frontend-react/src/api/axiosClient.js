@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-// Визначаємо базовий URL. Vite proxy перенаправляє /api на http://localhost:8080
-const API_URL = '/api';
+// ВИПРАВЛЕНО: Встановлюємо базовий URL на корінь '/'.
+// Це дозволяє запитам з контекстів (наприклад, '/api/products')
+// коректно працювати з Nginx Proxy, який перенаправляє /api/ на бекенд.
+const API_URL = '/';
 
 // 1. Створюємо клієнт Axios без перехоплювачів
 const baseClient = axios.create({
