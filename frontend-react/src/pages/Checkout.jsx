@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
-import { useNavigate } from 'react-router-dom';
-import { getAxiosClient } from '../api/axiosClient'; // <-- Клієнт для захищених запитів
+import { useNavigate, Link } from 'react-router-dom';
+import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 const Checkout = () => {
     const { cartItems, getCartTotal, clearCart } = useCart();
-    const { addOrderToHistory, user, authData } = useUser(); // Отримуємо authData для перевірки
+    const { user, authData } = useUser();
     const navigate = useNavigate();
     const client = getAxiosClient();
 
@@ -15,34 +15,28 @@ const Checkout = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [orderError, setOrderError] = useState(null);
 
-    // Стан для форми
     const [formData, setFormData] = useState({
-        // Використовуємо поля DTO: firstName, lastName, email, numberPhone
         fullName: (user?.firstName || '') + ' ' + (user?.lastName || ''),
         email: user?.email || '',
-        address: '', // Адреса поки що локальна
+        address: '',
         cardNumber: '',
         expiry: '',
         cvv: ''
     });
 
-    // Перенаправляємо, якщо кошик порожній, але не після успішної оплати
     if (cartItems.length === 0 && !isSuccess) {
         return <div className="container mx-auto px-4 py-20 text-center"><h2 className="text-3xl font-bold">Ваш кошик порожній 😕</h2><Link to="/products" className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition duration-300 mt-4 inline-block">Перейти до каталогу</Link></div>;
     }
 
-    // --- 🔥 ОБРОБКА ВВОДУ 🔥 ---
     const handleChange = (e) => {
         const { name, value } = e.target;
         let formattedValue = value;
 
-        // 1. ФОРМАТУВАННЯ НОМЕРА КАРТКИ (XXXX XXXX XXXX XXXX)
         if (name === 'cardNumber') {
             const rawValue = value.replace(/\D/g, '');
             const truncated = rawValue.slice(0, 16);
             formattedValue = truncated.replace(/(\d{4})(?=\d)/g, '$1 ');
         }
-        // 2. ФОРМАТУВАННЯ ТЕРМІНУ ДІЇ (MM/YY)
         else if (name === 'expiry') {
             const rawValue = value.replace(/\D/g, '');
             const truncated = rawValue.slice(0, 4);
@@ -52,7 +46,6 @@ const Checkout = () => {
                 formattedValue = truncated;
             }
         }
-        // 3. CVV (Тільки цифри)
         else if (name === 'cvv') {
             formattedValue = value.replace(/\D/g, '').slice(0, 3);
         }
@@ -60,9 +53,6 @@ const Checkout = () => {
         setFormData({ ...formData, [name]: formattedValue });
     };
 
-    // -------------------------------------------------------------
-    // 💡 ОБРОБКА ЗАМОВЛЕННЯ (API POST-ЗАХИЩЕНИЙ)
-    // -------------------------------------------------------------
     const handleSubmit = async (e) => {
         e.preventDefault();
         setOrderError(null);
@@ -74,39 +64,25 @@ const Checkout = () => {
             return;
         }
 
-        // 1. Формуємо DTO для замовлення
         const orderDto = {
-            // Ми не передаємо orderDate, paymentStatus, deliveryStatus, оскільки це робить бекенд.
-            // Ми повинні передати лише список товарів.
-
-            // Перетворюємо cartItems у DTO для OrderItem
             orderItems: cartItems.map(item => ({
-                // item.id - це мок-id, потрібно, щоб бекенд знайшов ProductId за цим id
-                // У реальності, фронтенд має знати product.productId
-
-                // Тимчасово припускаємо, що ProductId = item.id
                 productId: item.id,
                 quantity: item.quantity,
-                price: item.price // Ціна повинна бути підтверджена бекендом
+                price: item.price
             })),
-
-            // Дані для адреси (поки що мок-інформація)
             deliveryAddress: formData.address,
-            totalAmount: getCartTotal(), // Сума повинна бути розрахована на бекенді
+            totalAmount: getCartTotal(),
         };
 
         try {
-            // POST /api/orders (захищений)
-            // OrderController на бекенді встановить orderDate, paymentStatus=false, deliveryStatus=IN_PROGRESS, UserID
-            await client.post('/orders', orderDto);
+            // ВИПРАВЛЕНО: Додано префікс /api
+            await client.post('/api/orders', orderDto);
 
-            // 2. Успіх
             setIsProcessing(false);
             setIsSuccess(true);
-            clearCart(); // Очищаємо локальний кошик
+            clearCart();
 
         } catch (err) {
-            // 3. Помилка
             setOrderError(`Не вдалося оформити замовлення. ${err.response?.data?.message || err.message}`);
             toast.error("Помилка при оплаті.");
             console.error("Order submit error:", err);

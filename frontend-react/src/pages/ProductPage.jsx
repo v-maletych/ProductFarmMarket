@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
-import { getAxiosClient } from '../api/axiosClient'; // <-- Клієнт для API
+import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 const ProductPage = () => {
@@ -10,15 +10,13 @@ const ProductPage = () => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
     const { authData } = useUser();
-    const client = getAxiosClient(); // Захищений клієнт
+    const client = getAxiosClient();
 
-    // Стан для даних, отриманих з API
     const [product, setProduct] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // --- ЛОГІКА ФОРМИ ВІДГУКУ ---
     const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -30,15 +28,13 @@ const ProductPage = () => {
         setIsLoading(true);
         setError(null);
         try {
-            // 1. Отримання деталей продукту
-            const productRes = await client.get(`/products/${id}`);
+            // ВИПРАВЛЕНО: Додано префікс /api
+            const productRes = await client.get(`/api/products/${id}`);
             setProduct(productRes.data);
 
-            // 2. Отримання відгуків (УВАГА: API не підтримує фільтрацію, тому отримуємо всі)
-            // На бекенді потрібно реалізувати ендпоінт /api/reviews/product/{id}
-            const reviewsRes = await client.get('/reviews');
+            // ВИПРАВЛЕНО: Додано префікс /api
+            const reviewsRes = await client.get('/api/reviews');
 
-            // Фільтруємо відгуки на клієнті (тимчасове рішення)
             const filteredReviews = reviewsRes.data.filter(r => r.product?.productId === productRes.data.productId);
             setReviews(filteredReviews);
 
@@ -50,9 +46,7 @@ const ProductPage = () => {
         }
     }, [id, client]);
 
-    // Запускаємо завантаження при монтуванні
     useEffect(() => {
-        // ID з URL завжди є string, тому parseInt не потрібен, але ми перевіряємо
         if (id) {
             fetchProductAndReviews();
         }
@@ -74,21 +68,17 @@ const ProductPage = () => {
 
         try {
             const reviewData = {
-                // Raiting (це ENUM Raiting.FIVE, Raiting.FOUR)
                 raiting: newReview.rating === 5 ? 'FIVE' :
                     newReview.rating === 4 ? 'FOUR' :
                         newReview.rating === 3 ? 'THREE' :
                             newReview.rating === 2 ? 'TWO' : 'ONE',
                 comment: newReview.comment,
-                // Передаємо ID об'єктів для ManyToOne
                 product: { productId: product.productId },
-                // User ID буде встановлено автоматично на бекенді через SecurityContext
             };
 
-            // POST /api/reviews (захищений)
-            await client.post('/reviews', reviewData);
+            // ВИПРАВЛЕНО: Додано префікс /api
+            await client.post('/api/reviews', reviewData);
 
-            // Оновлюємо список відгуків
             await fetchProductAndReviews();
 
             setNewReview({ rating: 5, comment: '' });
@@ -114,7 +104,6 @@ const ProductPage = () => {
         return <div className="text-center py-20"><h2 className="text-2xl font-bold">Товар не знайдено 😕</h2><button onClick={() => navigate('/products')} className="mt-4 text-green-600 underline">Повернутися в каталог</button></div>;
     }
 
-    // Обчислення середньої оцінки (для краси UI)
     const averageRating = reviews.length > 0
         ? reviews.reduce((sum, r) => sum + r.raiting, 0) / reviews.length
         : 0;
@@ -138,7 +127,6 @@ const ProductPage = () => {
                         <span className="text-gray-500 text-xl">/ {product.unit || 'кг'}</span>
                     </div>
                     <div className="flex gap-4">
-                        {/* ID, що передається в кошик, має бути ID з БД */}
                         <button onClick={() => addToCart(product)} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                             Додати в кошик
@@ -152,7 +140,6 @@ const ProductPage = () => {
                 </div>
             </div>
 
-            {/* 🔥 СЕКЦІЯ ВІДГУКІВ 🔥 */}
             <div className="bg-white rounded-3xl shadow-lg p-6 md:p-10 border border-gray-100">
                 <h3 className="text-2xl font-bold text-gray-800 mb-6">Відгуки покупців ({reviews.length})</h3>
 
@@ -191,7 +178,6 @@ const ProductPage = () => {
                 <div className="space-y-6">
                     {reviews.length > 0 ? (
                         reviews.map(review => (
-                            // УВАГА: review.id тепер це reviewId з DTO
                             <div key={review.reviewId} className="border-b border-gray-100 pb-6 last:border-0">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-3">
@@ -203,7 +189,6 @@ const ProductPage = () => {
                                             <div className="text-yellow-400 text-sm">{'★'.repeat(review.raiting)}{'☆'.repeat(5-review.raiting)}</div>
                                         </div>
                                     </div>
-                                    {/* review.createdAt - це Timestamp з бекенду */}
                                     <span className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</span>
                                 </div>
                                 <p className="text-gray-600 pl-14">{review.comment}</p>

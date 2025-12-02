@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
-import { getAxiosClient } from '../api/axiosClient'; // <-- Клієнт для захищених запитів
+import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 // === КОМПОНЕНТ ОДНОГО ЗАМОВЛЕННЯ ===
-// УВАГА: У реальності цей компонент повинен використовувати API для видалення
 const OrderItem = ({ order, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    // Обробка видалення з підтвердженням
     const handleDelete = (e) => {
         e.stopPropagation();
-        // Використовуємо кастомний діалог, оскільки window.confirm не рекомендовано
         if (window.confirm(`Видалити замовлення #${order.id}? Ця дія незворотна!`)) {
-            onDelete(order.id); // Викликаємо функцію з контролера
+            onDelete(order.id);
         }
     };
 
@@ -75,34 +72,30 @@ const OrderItem = ({ order, onDelete }) => {
 // 💡 ГОЛОВНИЙ КОМПОНЕНТ PROFILE
 // ----------------------------------------------------------------------
 const Profile = () => {
-    const { user, logout, authData, fetchUserProfile, isLoading: isAuthLoading } = useUser(); // Отримуємо функції та дані
+    const { user, logout, authData, fetchUserProfile, isLoading: isAuthLoading } = useUser();
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [isDataLoading, setIsDataLoading] = useState(false);
     const client = getAxiosClient();
 
-    // Локальний стан форми (копія DTO користувача)
     const [formData, setFormData] = useState({
         userId: null, firstName: '', lastName: '', numberPhone: '', email: '',
-        // Кастомні поля, які не зберігаються в БД, але можуть бути в userProfile DTO
         bannerColor: '#10b981', bannerImage: '', cardColor: '#ffffff', pageColor: '#f9fafb',
         orders: [], wishlist: []
     });
 
-    // 1. Ініціалізація форми даними з контексту (після завантаження)
+    // 1. Оновлення стану форми при зміні даних користувача
     useEffect(() => {
         if (isAuthLoading) return;
         if (!user) {
             navigate('/login');
         } else {
-            // Копіюємо поля з DTO user (firstName, lastName, email)
             setFormData({
                 userId: user.userId || authData.userId,
                 firstName: user.firstName || '',
                 lastName: user.lastName || '',
                 email: user.email || '',
                 numberPhone: user.numberPhone || '',
-                // Кастомні поля, яких немає в DTO бекенду, але є в мок-даних
                 bannerColor: user.bannerColor || '#10b981',
                 bannerImage: user.bannerImage || '',
                 cardColor: user.cardColor || '#ffffff',
@@ -111,9 +104,8 @@ const Profile = () => {
                 wishlist: user.wishlist || []
             });
         }
-    }, [user, navigate, isAuthLoading]);
+    }, [user, navigate, isAuthLoading, authData.userId]); // Включено authData.userId та user
 
-    // 2. Обробка вводу
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     // 3. ЗБЕРЕЖЕННЯ ПРОФІЛЮ (API PUT-ЗАПИТ)
@@ -122,27 +114,35 @@ const Profile = () => {
         try {
             const userId = authData.userId;
 
-            // Створюємо DTO для PUT-запиту, видаляючи зайві поля
+            // 🛑 НЕ ВІДПРАВЛЯЄМО EMAIL!
             const updateDto = {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
-                email: formData.email,
                 numberPhone: formData.numberPhone,
-                // Пароль тут не передаємо, оскільки це PUT-профілю
             };
 
-            // PUT /api/users/{userId}
-            await client.put(`/users/${userId}`, updateDto);
+            // 1. ВИКОНУЄМО ОСНОВНЕ ОНОВЛЕННЯ ДАНИХ
+            await client.put(`/api/users/${userId}`, updateDto);
 
-            // Оновлюємо локальний стейт профілю (завантажуємо DTO заново)
-            await fetchUserProfile(authData.token);
-
+            // 2. ЯКЩО ОСНОВНЕ ОНОВЛЕННЯ УСПІШНЕ, ВІДРАЗУ ПОКАЗУЄМО УСПІХ.
             toast.success('Профіль оновлено успішно!');
+
+            // 3. 🛡️ СПРОБА ОНОВЛЕННЯ КОНТЕКСТУ В ОКРЕМОМУ БЛОЦІ
+            try {
+                await fetchUserProfile(authData.token);
+            } catch (profileError) {
+                // Якщо не вдалося оновити дані в контексті (це схоже на вашу проблему)
+                console.error("Failed to refresh user profile after update:", profileError.response || profileError);
+                toast.warn("Дані збережено, але для відображення змін може знадобитися оновити сторінку.");
+            }
+
             setIsEditing(false);
 
         } catch (error) {
-            toast.error('Не вдалося оновити профіль. Перевірте email.');
-            console.error("Profile update error:", error);
+            // ЦЕЙ БЛОК ВИКОНАЄТЬСЯ, ТІЛЬКИ ЯКЩО САМ PUT-ЗАПИТ ПРОВАЛИТЬСЯ (400, 500 тощо)
+            const backendMessage = error.response?.data?.message || 'Невідома помилка оновлення.';
+            toast.error(`Не вдалося оновити профіль: ${backendMessage}`);
+            console.error("Profile update error:", error.response || error);
         } finally {
             setIsDataLoading(false);
         }
@@ -151,11 +151,10 @@ const Profile = () => {
     // 4. ФУНКЦІЯ ВИДАЛЕННЯ ЗАМОВЛЕННЯ (API DELETE)
     const deleteOrder = async (orderId) => {
         try {
-            // DELETE /api/orders/{orderId}
-            await client.delete(`/orders/${orderId}`);
+            // ВИПРАВЛЕНО: Додано префікс /api
+            await client.delete(`/api/orders/${orderId}`);
             toast.success('Замовлення видалено!');
 
-            // Оновлюємо профіль, щоб оновилась історія замовлень
             await fetchUserProfile(authData.token);
 
         } catch (error) {
@@ -164,19 +163,16 @@ const Profile = () => {
         }
     };
 
-    // 5. ФУНКЦІЯ ОЧИЩЕННЯ ІСТОРІЇ (TODO: Потрібен окремий ендпоінт на бекенді)
     const handleClearHistory = () => {
         if (window.confirm("Ви впевнені, що хочете видалити ВСЮ історію замовлень?")) {
-            // У реальності тут має бути запит DELETE /api/orders/user/{userId}
             toast.error('Історія замовлень очищена (мок-логіка).');
-            // Оновлюємо локальний стан, поки немає API
             setFormData(prev => ({...prev, orders: []}));
         }
     };
 
 
     const handleCancel = () => {
-        // Відновлюємо форму з оригінальних даних
+        // Логіка скасування повертає форму до початкового стану (з user)
         setFormData({
             userId: user.userId,
             firstName: user.firstName,
@@ -193,8 +189,6 @@ const Profile = () => {
         setIsEditing(false);
     };
 
-    // ---------------------------------------------------
-
     if (isAuthLoading || !user) return <div className="flex justify-center items-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div></div>;
 
     const currentCardColor = isEditing ? formData.cardColor : (user.cardColor || '#ffffff');
@@ -205,7 +199,6 @@ const Profile = () => {
             <div className="container mx-auto px-4">
                 <div className="rounded-3xl shadow-xl overflow-hidden mb-8 border border-gray-200 transition-colors duration-500" style={{ backgroundColor: currentCardColor }}>
 
-                    {/* БАНЕР */}
                     <div className="h-48 md:h-64 w-full relative bg-cover bg-center transition-all duration-500"
                          style={{ backgroundColor: formData.bannerColor, backgroundImage: formData.bannerImage ? `url(${formData.bannerImage})` : 'none' }}>
                         {formData.bannerImage && <div className="absolute inset-0 bg-black/20"></div>}
@@ -214,7 +207,6 @@ const Profile = () => {
                     <div className="px-6 md:px-10 pb-8">
                         <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 mb-6 gap-6 relative z-10">
                             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
-                                {/* user.firstName - тепер DTO поле */}
                                 <div className="w-full h-full bg-green-100 text-green-600 flex items-center justify-center text-5xl font-bold">{user.firstName.charAt(0).toUpperCase()}</div>
                             </div>
                             {!isEditing && (
@@ -245,7 +237,6 @@ const Profile = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/80 p-6 rounded-2xl border border-gray-200 animate-fadeIn backdrop-blur-sm">
                                 <div className="space-y-5">
                                     <h3 className="font-bold text-gray-700 border-b pb-2">🎨 Кастомізація (Мок)</h3>
-                                    {/* Ці поля залишаються мок-даними, оскільки їх немає на бекенді */}
                                     <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"><label className="text-sm font-bold text-gray-600">Фон сторінки</label><input type="color" name="pageColor" value={formData.pageColor} onChange={handleChange} className="w-10 h-10 p-1 rounded cursor-pointer border-none"/></div>
                                     <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"><label className="text-sm font-bold text-gray-600">Фон картки</label><input type="color" name="cardColor" value={formData.cardColor} onChange={handleChange} className="w-10 h-10 p-1 rounded cursor-pointer border-none"/></div>
                                     <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"><label className="text-sm font-bold text-gray-600">Колір банера</label><input type="color" name="bannerColor" value={formData.bannerColor} onChange={handleChange} className="w-10 h-10 p-1 rounded cursor-pointer border-none"/></div>
@@ -257,7 +248,6 @@ const Profile = () => {
                                     <div><label className="text-xs text-gray-500 font-bold uppercase">Ім'я</label><input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
                                     <div><label className="text-xs text-gray-500 font-bold uppercase">Прізвище</label><input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
                                     <div><label className="text-xs text-gray-500 font-bold uppercase">Телефон</label><input type="text" name="numberPhone" value={formData.numberPhone} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
-                                    {/* Email не можна редагувати через профіль PUT */}
                                     <div><label className="text-xs text-gray-500 font-bold uppercase">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-gray-200 cursor-not-allowed" disabled/></div>
                                 </div>
                             </div>
@@ -275,7 +265,6 @@ const Profile = () => {
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    {/* Заголовок з кнопкою "Очистити все" */}
                                     <div className="flex justify-between items-center mb-6 border-b pb-4">
                                         <h3 className="text-xl font-bold text-gray-800">Історія замовлень</h3>
                                         {user.orders && user.orders.length > 0 && (
@@ -290,7 +279,6 @@ const Profile = () => {
 
                                     {user.orders && user.orders.length > 0 ? (
                                         <ul className="space-y-4">
-                                            {/* Використовуємо дані з formData.orders (мок-дані) */}
                                             {formData.orders.map(order => (
                                                 <OrderItem key={order.id} order={order} onDelete={deleteOrder} />
                                             ))}

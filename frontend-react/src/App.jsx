@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // === КОНТЕКСТИ ===
@@ -22,26 +22,22 @@ import Wishlist from './pages/Wishlist.jsx';
 
 
 // -----------------------------------------------------------------------------
-// 💡 КОМПОНЕНТ ЗАХИЩЕНОГО МАРШРУТУ (КРИТИЧНО)
+// 💡 КОМПОНЕНТ ЗАХИЩЕНОГО МАРШРУТУ (Гарантовано безпечний)
 // -----------------------------------------------------------------------------
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { authData, isLoading } = useUser();
     const location = useLocation();
 
-    if (isLoading) {
-        // Якщо дані ще завантажуються (токен перевіряється)
-        return <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div></div>;
-    }
+    // NOTE: Перевірка isLoading винесена на рівень батьківського компонента App!
 
+    // 1. Якщо НЕ авторизований (і завантаження завершено), редирект на вхід
     if (!authData.isAuthenticated) {
-        // Якщо не авторизований, перенаправляємо на вхід
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // Перевірка ролей
+    // 2. Перевірка ролей
     const userRole = authData.role;
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-        // Якщо роль не дозволена
         return (
             <div className="text-center p-10 bg-red-100 text-red-700">
                 <p className="text-xl font-bold">403 Forbidden</p>
@@ -50,12 +46,26 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         );
     }
 
+    // 3. Доступ дозволено
     return children;
 };
 // -----------------------------------------------------------------------------
 
 
-function App() {
+export default function App() {
+    const { isLoading } = useUser(); // <-- Отримуємо загальний стан завантаження
+
+    // 1. Якщо контекст ще завантажується, блокуємо рендеринг всього UI (вирішуємо проблему циклу)
+    if (isLoading) {
+        return (
+            <div className="flex flex-col min-h-screen items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600"></div>
+                <p className="mt-4 text-gray-600">Ініціалізація даних...</p>
+            </div>
+        );
+    }
+
+    // 2. Рендеримо UI тільки після завершення завантаження
     return (
         <div className="flex flex-col min-h-screen font-sans text-gray-900">
 
@@ -76,9 +86,9 @@ function App() {
                     <Route path="/register" element={<Auth />} />
 
                     {/* Захищені маршрути */}
-                    <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                    <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+                    <Route path="/checkout" element={<ProtectedRoute allowedRoles={['CUSTOMER', 'FARMER', 'ADMIN']}><Checkout /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute allowedRoles={['CUSTOMER', 'FARMER', 'ADMIN']}><Profile /></ProtectedRoute>} />
+                    <Route path="/wishlist" element={<ProtectedRoute allowedRoles={['CUSTOMER', 'FARMER', 'ADMIN']}><Wishlist /></ProtectedRoute>} />
 
                     {/* Адміністративний маршрут (Приклад) */}
                     <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><h1 className="p-10 text-center text-3xl font-bold text-red-700">Адмін Панель</h1></ProtectedRoute>} />
@@ -92,5 +102,3 @@ function App() {
         </div>
     );
 }
-
-export default App;
