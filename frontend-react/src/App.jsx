@@ -1,10 +1,8 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
-// === КОНТЕКСТИ (МОЗОК САЙТУ) ===
-import { CartProvider } from './context/CartContext'; // <--- ОСЬ ЦЬОГО НЕ ВИСТАЧАЛО
-import { UserProvider } from './context/UserContext';
+// === КОНТЕКСТИ ===
+import { useUser } from './context/UserContext';
 
 // === КОМПОНЕНТИ ===
 import Header from './components/Header.jsx';
@@ -22,52 +20,77 @@ import Auth from './pages/Auth.jsx';
 import Profile from './pages/Profile.jsx';
 import Wishlist from './pages/Wishlist.jsx';
 
+
+// -----------------------------------------------------------------------------
+// 💡 КОМПОНЕНТ ЗАХИЩЕНОГО МАРШРУТУ (КРИТИЧНО)
+// -----------------------------------------------------------------------------
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const { authData, isLoading } = useUser();
+    const location = useLocation();
+
+    if (isLoading) {
+        // Якщо дані ще завантажуються (токен перевіряється)
+        return <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div></div>;
+    }
+
+    if (!authData.isAuthenticated) {
+        // Якщо не авторизований, перенаправляємо на вхід
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    // Перевірка ролей
+    const userRole = authData.role;
+    if (allowedRoles && !allowedRoles.includes(userRole)) {
+        // Якщо роль не дозволена
+        return (
+            <div className="text-center p-10 bg-red-100 text-red-700">
+                <p className="text-xl font-bold">403 Forbidden</p>
+                <p>У вас недостатньо прав ({userRole}) для доступу.</p>
+            </div>
+        );
+    }
+
+    return children;
+};
+// -----------------------------------------------------------------------------
+
+
 function App() {
-  return (
-    <UserProvider> {/* 1. Шар користувача */}
-      <CartProvider> {/* 2. Шар кошика */}
-        
+    return (
         <div className="flex flex-col min-h-screen font-sans text-gray-900">
-          <Toaster position="bottom-right" toastOptions={{ duration: 3000 }} />
-          
-          <Header />
 
-          <main className="flex-grow">
-            <Routes>
-              {/* Головна */}
-              <Route path="/" element={<Home />} />
-              
-              {/* Каталог (два варіанти: загальний і по категорії) */}
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:categoryName" element={<Products />} />
-              
-              {/* Товар */}
-              <Route path="/product/:id" element={<ProductPage />} />
-              
-              {/* Інфо */}
-              <Route path="/about" element={<About />} />
-              
-              {/* Кошик та Оплата */}
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              
-              {/* Авторизація */}
-              <Route path="/login" element={<Auth />} />
-              <Route path="/profile" element={<Profile />} />
-              
-              {/* Помилка 404 */}
-              <Route path="*" element={<NotFound />} />
-              {/* Сторінка бажань */}
-              <Route path="/wishlist" element={<Wishlist />} /> {/* <--- Додай цей рядок */}
-            </Routes>
-          </main>
+            <Header />
 
-          <Footer />
+            <main className="flex-grow">
+                <Routes>
+                    {/* Публічні маршрути */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/products/:categoryName" element={<Products />} />
+                    <Route path="/product/:id" element={<ProductPage />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/cart" element={<Cart />} />
+
+                    {/* Аутентифікація */}
+                    <Route path="/login" element={<Auth />} />
+                    <Route path="/register" element={<Auth />} />
+
+                    {/* Захищені маршрути */}
+                    <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+
+                    {/* Адміністративний маршрут (Приклад) */}
+                    <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><h1 className="p-10 text-center text-3xl font-bold text-red-700">Адмін Панель</h1></ProtectedRoute>} />
+
+                    {/* Помилка 404 */}
+                    <Route path="*" element={<NotFound />} />
+                </Routes>
+            </main>
+
+            <Footer />
         </div>
-
-      </CartProvider>
-    </UserProvider>
-  );
+    );
 }
 
 export default App;
