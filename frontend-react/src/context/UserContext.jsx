@@ -1,119 +1,202 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import jwtDecode from 'jwt-decode';
+import { getAxiosClient, baseClient } from '../api/axiosClient';
 
+// 1. Створюємо контекст
 const UserContext = createContext();
 
+// 2. Провайдер
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); 
+    // authData зберігає JWT, роль та ID
+    const [authData, setAuthData] = useState({ token: null, isAuthenticated: false, role: null, userId: null });
+    // userProfile зберігає DTO користувача (FirstName, phone, address, etc.)
+    const [userProfile, setUserProfile] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      try { setUser(JSON.parse(storedUser)); } 
-      catch (error) { localStorage.removeItem('currentUser'); }
-    }
-    setIsLoading(false);
-  }, []);
+    // Функція для запитів до захищених ендпоінтів
+    const getClient = () => getAxiosClient();
 
-  const register = (name, email, password) => {
-    const usersDB = JSON.parse(localStorage.getItem('usersDB')) || [];
-    if (usersDB.find(u => u.email === email)) {
-      toast.error('Ця пошта вже зареєстрована!'); return false;
-    }
-    const newUser = { 
-      id: Date.now(), name, email, password, phone: '', address: '', avatar: '',
-      bannerColor: '#10b981', bannerImage: '', cardColor: '#ffffff', pageColor: '#f3f4f6',
-      orders: [],
-      wishlist: [] // <--- НОВЕ ПОЛЕ
+    // --- ЛОГІКА ЗАВАНТАЖЕННЯ ДАНИХ ПРОФІЛЮ (DTO) ---
+
+    // Функція для завантаження User DTO (профілю)
+    const fetchUserProfile = async (token) => {
+        try {
+            const client = getClient();
+            const decoded = jwtDecode(token);
+            const userId = decoded.userId; // Припускаємо, що ви додали userId в JWT клейми
+
+            // GET /api/users/{userId} - Захищений ендпоінт
+            const response = await client.get(`/users/${userId}`);
+
+            const profileData = response.data;
+
+            // УВАГА: Ми об'єднуємо DTO з мок-даними UI (bannerColor, etc.), оскільки їх немає в БД
+            const finalProfile = {
+                ...profileData,
+                // Мок-поля:
+                bannerColor: profileData.bannerColor || '#10b981',
+                cardColor: profileData.cardColor || '#ffffff',
+                orders: profileData.orders || [],
+                wishlist: profileData.wishlist || []
+            };
+
+            setUserProfile(finalProfile);
+            localStorage.setItem('userProfile', JSON.stringify(finalProfile));
+
+            return finalProfile;
+
+        } catch (error) {
+            console.error("Помилка завантаження профілю:", error);
+            // Якщо не вдалося завантажити профіль, робимо вихід
+            logout();
+        }
     };
-    usersDB.push(newUser);
-    localStorage.setItem('usersDB', JSON.stringify(usersDB));
-    login(email, password);
-    return true;
-  };
 
-  const login = (email, password) => {
-    const usersDB = JSON.parse(localStorage.getItem('usersDB')) || [];
-    const foundUser = usersDB.find(u => u.email === email && u.password === password);
-    if (foundUser) {
-      const { password, ...userWithoutPass } = foundUser;
-      setUser(userWithoutPass);
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPass));
-      toast.success(`Вітаємо, ${foundUser.name}!`);
-      return true;
+    // 3. Логіка виходу (включає logout з AuthContext)
+    const logout = () => {
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('userProfile');
+        setUserProfile(null);
+        setAuthData({ token: null, isAuthenticated: false, role: null, userId: null });
+        toast.success('Ви успішно вийшли з акаунту');
+    };
+
+    // Функція оновлення профілю (PUT) - викликається з Profile.jsx
+    const updateUserProfile = async (updatedDto) => {
+        try {
+            const client = getClient();
+            const userId = authData.userId;
+
+            // PUT /api/users/{userId}
+            await client.put(`/users/${userId}`, updatedDto);
+
+            // Оновлюємо локальний стейт, завантажуючи DTO заново
+            await fetchUserProfile(authData.token);
+
+            toast.success('Профіль оновлено успішно!');
+            return true;
+
+        } catch (error) {
+            toast.error("Не вдалося оновити профіль. Перевірте дані.");
+            console.error("Update profile error:", error);
+            return false;
+        }
     }
-    toast.error('Невірний email або пароль'); return false;
-  };
 
-  const logout = () => {
-    setUser(null); localStorage.removeItem('currentUser'); toast.success('Ви вийшли з акаунту');
-  };
 
-  const updateUserProfile = (updatedData) => {
-    if (!user) return;
-    updateUserData({ ...user, ...updatedData });
-    toast.success('Профіль оновлено успішно!');
-  };
+    // --- ПЕРЕВІРКА ТОКЕНА ПРИ СТАРТІ ---
+    useEffect(() => {
+        const token = localStorage.getItem('jwtToken');
+        const profile = localStorage.getItem('userProfile');
 
-  const addOrderToHistory = (orderData) => {
-    if (!user) return;
-    const fullDate = new Date().toLocaleString('uk-UA');
-    const newOrder = { ...orderData, id: Date.now(), date: fullDate };
-    updateUserData({ ...user, orders: [...(user.orders || []), newOrder] });
-  };
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                const currentTime = Date.now() / 1000;
 
-  const clearOrderHistory = () => {
-    if (!user) return;
-    updateUserData({ ...user, orders: [] });
-    toast.success('Історія замовлень очищена');
-  };
+                if (decoded.exp > currentTime) {
+                    const role = decoded.authorities ? decoded.authorities[0].authority : 'CUSTOMER';
+                    const userId = decoded.userId || null;
 
-  const deleteOrder = (orderId) => {
-    if (!user) return;
-    const updatedOrders = user.orders.filter(order => order.id !== orderId);
-    updateUserData({ ...user, orders: updatedOrders });
-    toast.success('Замовлення видалено');
-  };
+                    setAuthData({
+                        token, isAuthenticated: true, role, userId,
+                    });
 
-  // 🔥 НОВА ФУНКЦІЯ: ДОДАТИ/ВИДАЛИТИ З ОБРАНОГО 🔥
-  const toggleWishlist = (product) => {
-    if (!user) {
-      toast.error("Увійдіть, щоб додати в обране");
-      return;
+                    if (profile) {
+                        setUserProfile(JSON.parse(profile));
+                    } else {
+                        fetchUserProfile(token);
+                    }
+                } else {
+                    logout();
+                }
+            } catch (e) {
+                logout();
+            }
+        }
+        setIsLoading(false);
+    }, []);
+
+    // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
+
+    // Функція входу (викликається з Auth.jsx)
+    const login = (token) => {
+        localStorage.setItem('jwtToken', token);
+        const decoded = jwtDecode(token);
+
+        const role = decoded.authorities ? decoded.authorities[0].authority : 'CUSTOMER';
+        const userId = decoded.userId || null;
+
+        setAuthData({
+            token, isAuthenticated: true, role, userId,
+        });
+
+        // Запускаємо завантаження профілю DTO
+        fetchUserProfile(token);
+        toast.success(`Вітаємо! Ваша роль: ${role}`); // Тост про успішний вхід
+    };
+
+    // Допоміжна функція для перевірки ролі
+    const hasRole = (roles) => {
+        if (isLoading || !authData.isAuthenticated) return false;
+        const requiredRoles = Array.isArray(roles) ? roles : [roles];
+        return requiredRoles.includes(authData.role);
     }
-    const currentWishlist = user.wishlist || [];
-    const isExists = currentWishlist.find(p => p.id === product.id);
-    
-    let newWishlist;
-    if (isExists) {
-      newWishlist = currentWishlist.filter(p => p.id !== product.id);
-      toast("Видалено з обраного", { icon: '💔' });
-    } else {
-      newWishlist = [...currentWishlist, product];
-      toast("Додано в обране", { icon: '❤️' });
-    }
-    updateUserData({ ...user, wishlist: newWishlist });
-  };
 
-  // Допоміжна функція для збереження (щоб не дублювати код)
-  const updateUserData = (newUserState) => {
-    setUser(newUserState);
-    localStorage.setItem('currentUser', JSON.stringify(newUserState));
-    const usersDB = JSON.parse(localStorage.getItem('usersDB')) || [];
-    const newDB = usersDB.map(u => u.id === newUserState.id ? newUserState : u); // Важливо: зберігаємо все
-    localStorage.setItem('usersDB', JSON.stringify(newDB));
-  }
+    // --- ЛОГІКА WISHLIST, ORDERS (API MOCK) ---
 
-  return (
-    <UserContext.Provider value={{ 
-      user, isLoading, login, register, logout, 
-      updateUserProfile, addOrderToHistory, clearOrderHistory, deleteOrder,
-      toggleWishlist // <--- Передаємо
-    }}>
-      {children}
-    </UserContext.Provider>
-  );
+    // Логіка додавання/видалення з Wishlist
+    const toggleWishlist = async (product) => {
+        if (!authData.isAuthenticated) {
+            toast.error("Увійдіть, щоб додати в обране");
+            return;
+        }
+
+        // Тут має бути логіка API, яка звертається до /api/wishlist
+        toast("Логіка API Wishlist працює (MOCK)", { icon: '❤️' });
+    };
+
+    // Логіка замовлень (POST)
+    const addOrderToHistory = (orderData) => {
+        if (!authData.isAuthenticated) return;
+        // Тут має бути POST /api/orders
+        toast.error("Замовлення збережено (МОК API)");
+    };
+
+    // Логіка очищення історії
+    const clearOrderHistory = () => {
+        if (window.confirm("Видалити всю історію замовлень?")) {
+            // Тут має бути DELETE /api/orders/user/{userId}
+            toast.error('Історія очищена (МОК API)');
+        }
+    };
+
+    // Логіка видалення одного замовлення
+    const deleteOrder = (orderId) => {
+        // Тут має бути DELETE /api/orders/{orderId}
+        toast.error('Замовлення видалено (МОК API)');
+    };
+
+
+    return (
+        <UserContext.Provider value={{
+            user: userProfile,
+            authData,
+            isLoading,
+            login,
+            logout,
+            hasRole,
+            updateUserProfile,
+            toggleWishlist,
+            addOrderToHistory,
+            clearOrderHistory,
+            deleteOrder,
+        }}>
+            {children}
+        </UserContext.Provider>
+    );
 };
 
+// 3. Хук
 export const useUser = () => useContext(UserContext);
