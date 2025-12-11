@@ -11,13 +11,14 @@ const API_URL = '/api/auth'; // Базовий URL для аутентифіка
 // 1. КОМПОНЕНТ РЕЄСТРАЦІЇ
 // ----------------------------------------------------------------------
 const RegisterForm = () => {
-    // ВАЖЛИВО: Стан має включати всі поля DTO (lastName, numberPhone)
+    // ВАЖЛИВО: Додано selectedRole
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         password: '',
-        numberPhone: ''
+        numberPhone: '',
+        selectedRole: 'CUSTOMER' // <--- НОВЕ: Роль за замовчуванням
     });
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,7 @@ const RegisterForm = () => {
 
         try {
             // POST /api/auth/register
+            // Відправляємо formData, яке тепер містить selectedRole: 'CUSTOMER' або 'FARMER'
             const response = await baseClient.post(`${API_URL}/register`, formData);
 
             if (response.data && response.data.token) {
@@ -42,8 +44,12 @@ const RegisterForm = () => {
             }
 
         } catch (err) {
+            // ... (обробка помилок)
             if (err.response?.status === 409 || (err.response?.data?.message && err.response.data.message.includes("Email already exists"))) {
                 setError('Користувач з цією поштою вже існує.');
+            } else if (err.response?.data?.message) {
+                // Включимо повідомлення про помилку ролі, якщо воно є
+                setError(err.response.data.message);
             } else {
                 setError('Помилка реєстрації. Перевірте дані та зв\'язок з бекендом.');
             }
@@ -54,7 +60,7 @@ const RegisterForm = () => {
     };
 
     return (
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-5">
             <h2 className="text-3xl font-bold text-green-600">Реєстрація</h2>
             {error && <p className="bg-red-100 text-red-600 p-3 rounded-lg text-sm">{error}</p>}
 
@@ -69,7 +75,7 @@ const RegisterForm = () => {
                 placeholder="Ім'я"
             />
 
-            {/* Прізвище (ВИПРАВЛЕНО: Додано коректний input) */}
+            {/* Прізвище */}
             <input
                 type="text"
                 name="lastName"
@@ -80,7 +86,7 @@ const RegisterForm = () => {
                 placeholder="Прізвище"
             />
 
-            {/* Номер телефону (ВИПРАВЛЕНО: Додано коректний input) */}
+            {/* Номер телефону */}
             <input
                 type="text"
                 name="numberPhone"
@@ -112,6 +118,50 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Пароль"
             />
+
+            {/* 🔥 НОВИЙ БЛОК: Вибір ролі 🔥 */}
+            <div className="space-y-2 pt-2">
+                <label className="block text-sm font-semibold text-gray-700">Я хочу зареєструватися як:</label>
+                <div className="flex space-x-4">
+
+                    {/* Покупець (CUSTOMER) */}
+                    <label
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer w-1/2 transition ${formData.selectedRole === 'CUSTOMER' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                    >
+                        <input
+                            type="radio"
+                            name="selectedRole"
+                            value="CUSTOMER"
+                            checked={formData.selectedRole === 'CUSTOMER'}
+                            onChange={handleChange}
+                            className="text-green-600 focus:ring-green-500 w-4 h-4 mr-3"
+                        />
+                        <div>
+                            <span className="block font-bold text-gray-800">Покупець 🛒</span>
+                            <span className="text-xs text-gray-500">Купую товари на ринку.</span>
+                        </div>
+                    </label>
+
+                    {/* Продавець (FARMER) */}
+                    <label
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer w-1/2 transition ${formData.selectedRole === 'FARMER' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                    >
+                        <input
+                            type="radio"
+                            name="selectedRole"
+                            value="FARMER"
+                            checked={formData.selectedRole === 'FARMER'}
+                            onChange={handleChange}
+                            className="text-green-600 focus:ring-green-500 w-4 h-4 mr-3"
+                        />
+                        <div>
+                            <span className="block font-bold text-gray-800">Продавець 🧑‍🌾</span>
+                            <span className="text-xs text-gray-500">Створюю та продаю товари.</span>
+                        </div>
+                    </label>
+
+                </div>
+            </div>
 
             <button
                 type="submit"
