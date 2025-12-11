@@ -12,8 +12,12 @@ public class ProductResponse {
     private String description;
     private Double price;
     private Boolean inStock;
-    private Long ownerId; // ID власника (фермера)
+    private Long ownerId;
     private String ownerName;
+
+    // 🔥 НОВЕ ПОЛЕ: ID Категорії для фільтрації 🔥
+    private Long categoryId;
+
     private String categoryName;
 
     // Конструктор, який приймає об'єкт Product і копіює лише потрібні поля
@@ -24,12 +28,15 @@ public class ProductResponse {
         this.price = product.getPrice();
         this.inStock = product.getInStock();
 
-        // Перевірка на null, оскільки зв'язок ManyToOne може бути Lazy
+        // Перевірка на null для User
         if (product.getUser() != null) {
             this.ownerId = product.getUser().getUserId();
             this.ownerName = product.getUser().getFirstName() + " " + product.getUser().getLastName();
         }
+
+        // 🔥 КРИТИЧНА ЗМІНА: КОПІЮЄМО ID та Name 🔥
         if (product.getCategory() != null) {
+            this.categoryId = product.getCategory().getCategoryId(); // <-- КОПІЮЄМО ID
             this.categoryName = product.getCategory().getName();
         }
     }
@@ -49,6 +56,8 @@ public class ProductResponse {
     public void setOwnerId(Long ownerId) { this.ownerId = ownerId; }
     public String getOwnerName() { return ownerName; }
     public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
     public String getCategoryName() { return categoryName; }
     public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
 }
