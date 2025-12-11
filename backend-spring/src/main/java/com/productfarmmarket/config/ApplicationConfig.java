@@ -35,9 +35,11 @@ public class ApplicationConfig {
      * для ручної конфігурації у Spring Security.
      */
     @Bean
+    @SuppressWarnings("deprecation") // <-- ДОДАЙТЕ ЦЕЙ РЯДОК
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService());
+        // Рядки 39 і 40, які генерують попередження, тепер будуть проігноровані
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(); 
+        authProvider.setUserDetailsService(userDetailsService()); 
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
