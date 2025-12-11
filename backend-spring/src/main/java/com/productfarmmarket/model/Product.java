@@ -1,7 +1,6 @@
 package com.productfarmmarket.model;
 
 
-import com.productfarmmarket.repository.ProductRepository;
 import jakarta.persistence.*;
 
 @Entity

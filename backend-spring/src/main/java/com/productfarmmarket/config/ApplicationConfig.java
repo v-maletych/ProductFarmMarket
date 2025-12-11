@@ -1,6 +1,7 @@
 package com.productfarmmarket.config;
 
 import com.productfarmmarket.repository.UserRepository;
+import lombok.RequiredArgsConstructor; // Припускаємо, що ви використовуєте Lombok для @RequiredArgsConstructor
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,20 +14,26 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
+@RequiredArgsConstructor
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
+    // Порожній блок {} після userRepository; вилучено, оскільки він викликав би помилку.
 
-    public ApplicationConfig(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
+    /**
+     * Визначає, як Spring Security шукатиме користувачів (зазвичай по email).
+     */
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
     }
 
+    /**
+     * Визначає провайдера аутентифікації, який використовує UserDetailsService та PasswordEncoder.
+     * Хоча методи все ще можуть відображатися як @Deprecated, ця структура є правильною
+     * для ручної конфігурації у Spring Security.
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -35,11 +42,17 @@ public class ApplicationConfig {
         return authProvider;
     }
 
+    /**
+     * Менеджер аутентифікації. Spring Boot 3+ вимагає цього @Bean.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Хешерування паролів.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

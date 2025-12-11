@@ -3,7 +3,6 @@ package com.productfarmmarket.service;
 import com.productfarmmarket.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 
 @Service("productOwnershipService") // Вказуємо назву біна для SpEL
 public class ProductOwnershipService {

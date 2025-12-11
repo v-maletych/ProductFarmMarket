@@ -1,6 +1,5 @@
 package com.productfarmmarket.auth;
 
-import com.productfarmmarket.enums.RoleType; // <-- ДОДАЄМО ІМПОРТ
 
 // Клас DTO для запиту на реєстрацію
 public class RegisterRequest {

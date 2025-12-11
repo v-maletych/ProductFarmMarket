@@ -1,8 +1,6 @@
 package com.productfarmmarket.dto;
 
-import com.productfarmmarket.model.Category;
 import com.productfarmmarket.model.Product;
-import com.productfarmmarket.model.User;
 
 // DTO для безпечного повернення даних продукту
 public class ProductResponse {
