@@ -28,11 +28,10 @@ const ProductPage = () => {
         setIsLoading(true);
         setError(null);
         try {
-            // ВИПРАВЛЕНО: Додано префікс /api
+            // ... (використовуємо client тут) ...
             const productRes = await client.get(`/api/products/${id}`);
             setProduct(productRes.data);
 
-            // ВИПРАВЛЕНО: Додано префікс /api
             const reviewsRes = await client.get('/api/reviews');
 
             const filteredReviews = reviewsRes.data.filter(r => r.product?.productId === productRes.data.productId);
@@ -44,12 +43,15 @@ const ProductPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [id, client]);
+        // 🔥 РІШЕННЯ 2: ВИДАЛИТИ "client" З МАСИВУ ЗАЛЕЖНОСТЕЙ! 🔥
+    }, [id]);
+
 
     useEffect(() => {
         if (id) {
             fetchProductAndReviews();
         }
+        // "fetchProductAndReviews" тепер не змінюється, і цикл зупиняється.
     }, [fetchProductAndReviews, id]);
 
     // -----------------------------------------------------------

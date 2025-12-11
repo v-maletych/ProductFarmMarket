@@ -27,7 +27,8 @@ public class ProductController {
     // Отримання всіх продуктів - ПОВЕРТАЄМО DTO
     @GetMapping
     public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll().stream()
+        // 🔥 ВИКОРИСТОВУЄМО НОВИЙ МЕТОД З EAGER LOADING 🔥
+        return productRepository.findAllWithDetails().stream()
                 .map(ProductResponse::new)
                 .collect(Collectors.toList());
     }

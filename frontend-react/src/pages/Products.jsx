@@ -4,6 +4,8 @@ import ProductCard from '../components/ProductCard';
 import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
+// Об'єкт, який ми використовуємо для відображення назв.
+// Залишаємо лише ті, які нам потрібні, або ті, які були в мок-даних.
 const MOCK_SUBCAT_TRANSLATIONS = {
     apples: "🍎 Яблука", pears: "🍐 Груші", tomatoes: "🍅 Томати",
     potatoes: "🥔 Картопля", meat: "🥩 М'ясо", eggs: "🥚 Яйця",
@@ -28,11 +30,10 @@ const Products = () => {
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                // ВИПРАВЛЕНО: Додано префікс /api
+                // Завантажуємо всі продукти та всі категорії
                 const productsRes = await client.get('/api/products');
                 setAllProducts(productsRes.data);
 
-                // ВИПРАВЛЕНО: Додано префікс /api
                 const categoriesRes = await client.get('/api/categories');
                 setCategories(categoriesRes.data);
 
@@ -54,13 +55,21 @@ const Products = () => {
         setSortOption('default');
     }, [categoryName]);
 
+    const targetCategory = useMemo(() => {
+        if (!categoryName) return null;
+        return categories.find(cat => cat.name?.toLowerCase() === categoryName.toLowerCase());
+    }, [categories, categoryName]);
+
+
     const processedProducts = useMemo(() => {
         let result = [...allProducts];
 
-        if (categoryName) {
-            result = result.filter(p => p.category?.name?.toLowerCase() === categoryName.toLowerCase());
+        if (targetCategory) {
+            const targetId = targetCategory.categoryId;
+            result = result.filter(p => p.categoryId === targetId);
         }
 
+        // --- СОРТУВАННЯ ---
         if (sortOption === 'cheap') {
             result.sort((a, b) => a.price - b.price);
         } else if (sortOption === 'expensive') {
@@ -70,16 +79,16 @@ const Products = () => {
         }
 
         return result;
-    }, [allProducts, categoryName, activeSubcategory, sortOption]);
+    }, [allProducts, targetCategory, activeSubcategory, sortOption]);
 
+    // 🔥 ВИПРАВЛЕННЯ: ЗАЛИШАЄМО ЛИШЕ 'all'
     const availableSubcategories = useMemo(() => {
-        return ['all', 'apples', 'tomatoes'];
+        return ['all'];
     }, [processedProducts]);
 
     const getCategoryTitle = (slug) => {
         if (!slug) return 'Весь Каталог';
-        const found = categories.find(cat => cat.name?.toLowerCase() === slug.toLowerCase());
-        return found ? found.name : 'Продукти';
+        return targetCategory ? targetCategory.name : 'Продукти';
     };
 
     if (isLoading) {
@@ -112,7 +121,7 @@ const Products = () => {
                                 return (
                                     <li key={cat.categoryId}>
                                         <Link to={`/products/${slug}`} className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${isActive ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                            <div className="w-6 h-6 rounded-full bg-gray-200 object-cover flex items-center justify-center text-sm">C</div>
+                                            <div className="w-6 h-6 rounded-full bg-gray-200 object-cover flex items-center justify-center text-sm">{cat.name.charAt(0)}</div>
                                             <span className="font-medium">{cat.name}</span>
                                         </Link>
                                     </li>
@@ -140,6 +149,7 @@ const Products = () => {
                         </select>
                     </div>
 
+                    {/* 🔥 ЦЕЙ БЛОК ПОВИНЕН ЗНИКНУТИ, ОСКІЛЬКИ availableSubcategories.length буде 1 🔥 */}
                     {availableSubcategories.length > 1 && (
                         <div className="mb-8 flex flex-wrap gap-3">
                             {availableSubcategories.map(sub => (
