@@ -88,9 +88,13 @@ public class OrderController {
     public List<Order> getIncomingOrders() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
-        User currentFarmer = userRepository.findByEmail(userEmail).orElseThrow();
 
-        return orderRepository.findOrdersByFarmer(currentFarmer);
+        // Знаходимо ID поточного фермера
+        Long farmerId = userRepository.findByEmail(userEmail)
+                .map(User::getUserId)
+                .orElseThrow(() -> new RuntimeException("Farmer not found"));
+
+        return orderRepository.findOrdersByFarmerId(farmerId);
     }
 
     // 2. Зміна статусу замовлення (для ФЕРМЕРА)

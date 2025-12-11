@@ -19,9 +19,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Це дозволяє знайти всі замовлення конкретного юзера
     List<Order> findByUser(User user);
 
+    // 🔥 ВИПРАВЛЕНО: Звертаємось до p.user.userId
     @Query("SELECT DISTINCT o FROM Order o " +
             "JOIN OrderItem oi ON o.orderId = oi.order.orderId " +
             "JOIN Product p ON oi.product.productId = p.productId " +
-            "WHERE p.user = :farmer")
-    List<Order> findOrdersByFarmer(@Param("farmer") User farmer);
+            "WHERE p.user.userId = :farmerId")
+    List<Order> findOrdersByFarmerId(@Param("farmerId") Long farmerId);
 }
