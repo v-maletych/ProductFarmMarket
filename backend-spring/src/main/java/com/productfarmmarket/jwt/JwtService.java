@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors; // <-- ДОДАЄМО ІМПОРТ
 
 @Service
 public class JwtService {
@@ -25,15 +26,21 @@ public class JwtService {
     @Value("${application.security.jwt.expiration}")
     private long jwtExpiration;
 
-    // ВИПРАВЛЕНО: Додано логіку для вкладення userId в Claims
+    // ВИПРАВЛЕНО: Додано логіку для вкладення userId та Authorities (Ролей) в Claims
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
 
-        // КРИТИЧНЕ ВИПРАВЛЕННЯ: Додаємо ID користувача (який є Long)
-        // Це необхідно для того, щоб фронтенд міг завантажити профіль користувача
+        // 1. Додаємо ID користувача
         if (userDetails instanceof User) {
             extraClaims.put("userId", ((User) userDetails).getUserId());
         }
+
+        // 🔥 КРИТИЧНЕ ВИПРАВЛЕННЯ: ДОДАЄМО РОЛІ (Authorities) 🔥
+        // Збираємо всі ролі в список рядків
+        extraClaims.put("roles", userDetails.getAuthorities().stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.toList()));
+        // --------------------------------------------------
 
         return generateToken(extraClaims, userDetails);
     }
@@ -48,6 +55,7 @@ public class JwtService {
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
