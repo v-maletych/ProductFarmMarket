@@ -8,18 +8,38 @@ import { Navigate } from 'react-router-dom';
 // 1. Створюємо контекст
 const UserContext = createContext();
 
+// 💡 ДОПОМІЖНА ФУНКЦІЯ: Форматування ролі (беремо її з Profile.jsx, щоб уникнути помилок)
+const getRoleDisplay = (role) => {
+    switch (role) {
+        case 'FARMER':
+            return { text: 'Продавець (Фермер)', color: 'text-lime-600' };
+        case 'CUSTOMER':
+            return { text: 'Покупець (Клієнт)', color: 'text-green-600' };
+        case 'ADMIN':
+            return { text: 'Адміністратор', color: 'text-red-600' };
+        default:
+            return { text: 'Покупець (Клієнт)', color: 'text-green-600' }; // Default to Customer
+    }
+};
+
+// *********************************************************************************
+// ⚠️ getRoleFromToken ТЕПЕР НЕДОЦІЛЬНА, АЛЕ НЕХАЙ ПОВЕРТАЄ CUSTOMER, ПОКИ JWT ПОРОЖНІЙ
+// *********************************************************************************
+const getRoleFromToken = (decodedToken) => {
+    // ВАШ JWT ПОРОЖНІЙ, ТОМУ ЦЯ ЛОГІКА ЗАВЖДИ ВЕРНЕ 'CUSTOMER'
+    // МИ ВИКОРИСТОВУВАТИМЕМО ДАНІ З DTO ПРОФІЛЮ ДЛЯ ВИПРАВЛЕННЯ!
+    return 'CUSTOMER';
+};
+// *********************************************************************************
+
 // 2. Провайдер
 export const UserProvider = ({ children }) => {
-    // authData зберігає JWT, роль та ID
     const [authData, setAuthData] = useState({ token: null, isAuthenticated: false, role: null, userId: null });
-    // userProfile зберігає DTO користувача (FirstName, phone, address, etc.)
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Функція для запитів до захищених ендпоінтів
     const getClient = () => getAxiosClient();
 
-    // 3. Логіка виходу
     const logout = useCallback(() => {
         localStorage.removeItem('jwtToken');
         localStorage.removeItem('userProfile');
@@ -29,25 +49,20 @@ export const UserProvider = ({ children }) => {
     }, []);
 
     // --- ЛОГІКА ЗАВАНТАЖЕННЯ ДАНИХ ПРОФІЛЮ (DTO) ---
-    // **********************************************
-    // 💡 КРИТИЧНЕ ВИПРАВЛЕННЯ: Ізолюємо logout, щоб він не спрацьовував при кожній помилці 500/403
-    // **********************************************
+    // 🔥 КЛЮЧОВА ЗМІНА: ОНОВЛЕННЯ authData РОЛЮ ПІСЛЯ ЗАПИТУ
     const fetchUserProfile = useCallback(async (token) => {
-        // У цьому місці ми НЕ викликаємо logout(), щоб не потрапити у цикл
-        // (logout викликається тільки в перехоплювачі Axios)
         try {
             const client = getClient();
             const decoded = jwtDecode(token);
             const userId = decoded.userId;
 
-            // GET /api/users/{userId} - Захищений ендпоінт
             const response = await client.get(`/api/users/${userId}`);
+            const profileData = response.data; // profileData.role === 'FARMER' або 'CUSTOMER'
 
-            const profileData = response.data;
-
+            // 1. Створюємо DTO профілю
             const finalProfile = {
                 ...profileData,
-                // Мок-поля:
+                // ... (Мок-поля) ...
                 bannerColor: profileData.bannerColor || '#10b981',
                 cardColor: profileData.cardColor || '#ffffff',
                 orders: profileData.orders || [],
@@ -57,44 +72,41 @@ export const UserProvider = ({ children }) => {
             setUserProfile(finalProfile);
             localStorage.setItem('userProfile', JSON.stringify(finalProfile));
 
+            // 2. 🔥 ОНОВЛЕННЯ authData РОЛЮ З DTO! 🔥
+            setAuthData(prev => ({
+                ...prev,
+                role: profileData.role // <--- ВИКОРИСТОВУЄМО АКТУАЛЬНУ РОЛЬ З БАЗИ ДАНИХ
+            }));
+
+
             return finalProfile;
 
         } catch (error) {
             console.error("Помилка завантаження профілю:", error);
-            // Видалено: logout(); // 🛑 Тепер logout() відбувається в axiosClient.js interceptor
         }
-    }, []); // Тепер немає залежності від logout, оскільки ми його не викликаємо тут
+    }, []);
 
 
     // Функція оновлення профілю (PUT)
     const updateUserProfile = async (updatedDto) => {
         try {
+            // ... (PUT логіка залишається без змін)
             const client = getClient();
             const userId = authData.userId;
 
-            // PUT /api/users/{userId}
             await client.put(`/api/users/${userId}`, updatedDto);
 
-            // **********************************************
-            // ✅ КРИТИЧНЕ ВИПРАВЛЕННЯ: ВИКОНАЙТЕ АВТОМАТИЧНЕ ОНОВЛЕННЯ КОНТЕКСТУ
-            // **********************************************
-
-            // Якщо PUT успішний, ми ЗНОВУ завантажуємо профіль.
-            // Ми ізолюємо цей виклик, щоб він не викликав помилку в catch блоці нижче
-            // і не маскував успіх PUT-запиту.
             const updatedProfile = await fetchUserProfile(authData.token);
 
             if (updatedProfile) {
                 toast.success('Профіль оновлено успішно!');
                 return true;
             } else {
-                // Якщо PUT був успішним, але fetchUserProfile провалився
                 toast.warn("Профіль оновлено, але для відображення змін може знадобитися оновити сторінку.");
-                return true; // Вважаємо успіхом, оскільки дані оновлено
+                return true;
             }
 
         } catch (error) {
-            // ЦЕЙ БЛОК ВИКОНУЄТЬСЯ, ЯКЩО САМ PUT-ЗАПИТ ПРОВАЛИТЬСЯ (400, 403, 500)
             const backendMessage = error.response?.data?.message || 'Невідома помилка.';
             toast.error(`Не вдалося оновити профіль: ${backendMessage}`);
             console.error("Update profile error:", error.response || error);
@@ -114,7 +126,9 @@ export const UserProvider = ({ children }) => {
                 const currentTime = Date.now() / 1000;
 
                 if (decoded.exp > currentTime) {
-                    const role = decoded.authorities ? decoded.authorities[0].authority : 'CUSTOMER';
+                    // 🔥 ВИПРАВЛЕННЯ 1: Тут встановлюємо role=CUSTOMER, оскільки в JWT її немає.
+                    // Вона буде перевизначена у fetchUserProfile
+                    const role = 'CUSTOMER'; // getRoleFromToken(decoded);
                     const userId = decoded.userId || null;
 
                     setAuthData({
@@ -122,17 +136,20 @@ export const UserProvider = ({ children }) => {
                     });
 
                     if (profile) {
-                        setUserProfile(JSON.parse(profile));
+                        // Якщо профіль вже є, ми використовуємо роль із нього для первинного відображення
+                        const parsedProfile = JSON.parse(profile);
+                        setUserProfile(parsedProfile);
+                        // Тимчасово встановлюємо роль з Local Storage DTO, поки не прийдуть свіжі дані
+                        setAuthData(prev => ({ ...prev, role: parsedProfile.role }));
                     }
 
-                    // Завантажуємо свіжі дані при кожному запуску (завжди)
+                    // fetchUserProfile тут оновить роль, використовуючи свіжі дані з БД
                     fetchUserProfile(token);
 
                 } else {
                     logout();
                 }
             } catch (e) {
-                // Якщо токен недійсний або пошкоджений
                 logout();
             }
         }
@@ -147,16 +164,21 @@ export const UserProvider = ({ children }) => {
         localStorage.setItem('jwtToken', token);
         const decoded = jwtDecode(token);
 
-        const role = decoded.authorities ? decoded.authorities[0].authority : 'CUSTOMER';
+        // 🔥 ВИПРАВЛЕННЯ 2: Тут також встановлюємо role=CUSTOMER
+        const role = 'CUSTOMER'; // getRoleFromToken(decoded);
         const userId = decoded.userId || null;
 
         setAuthData({
             token, isAuthenticated: true, role, userId,
         });
 
-        // Запускаємо завантаження профілю
-        fetchUserProfile(token);
-        toast.success(`Вітаємо! Ваша роль: ${role}`);
+        // fetchUserProfile оновить authData.role
+        fetchUserProfile(token)
+            .then(profile => {
+                if(profile) {
+                    toast.success(`Вітаємо! Ваша роль: ${getRoleDisplay(profile.role).text}`);
+                }
+            });
     };
 
     // Допоміжна функція для перевірки ролі
@@ -166,7 +188,7 @@ export const UserProvider = ({ children }) => {
         return requiredRoles.includes(authData.role);
     }
 
-    // --- ЛОГІКА WISHLIST, ORDERS (API MOCK) ---
+    // ... (решта коду залишається без змін)
 
     const toggleWishlist = async (product) => {
         if (!authData.isAuthenticated) {
@@ -200,7 +222,7 @@ export const UserProvider = ({ children }) => {
             login,
             logout,
             hasRole,
-            fetchUserProfile, // Тепер експортуємо для використання поза контекстом, якщо потрібно
+            fetchUserProfile,
             updateUserProfile,
             toggleWishlist,
             addOrderToHistory,
