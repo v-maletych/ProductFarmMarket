@@ -4,12 +4,10 @@ import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
 import { useMarketData } from '../context/MarketDataContext';
 
-// ВИПРАВЛЕНО: Використовуємо експорт за замовчуванням при оголошенні
 export default function Header() {
     const { getCartCount } = useCart();
-    // user (це наш DTO Profile)
     const { user, authData, isLoading } = useUser();
-    const { products, categories, loadingData } = useMarketData(); // <-- ДАНІ З API
+    const { products, categories, loadingData } = useMarketData();
 
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,11 +33,9 @@ export default function Header() {
         }
     };
 
-    // Продукти з API використовують productId як унікальний ключ
     const handleResultClick = (productId) => {
         setShowResults(false);
         setSearchTerm('');
-        // Припускаємо, що маршрут - /product/ID
         navigate(`/product/${productId}`);
     };
 
@@ -55,9 +51,11 @@ export default function Header() {
 
     const closeMenu = () => setIsMenuOpen(false);
 
-    // 💡 ФІКС: БЕЗПЕЧНЕ ОТРИМАННЯ ІМЕНІ (запобігає циклу)
     const userNameForAvatar = user?.firstName ? user.firstName.charAt(0).toUpperCase() : '👤';
     const wishlistCount = user?.wishlist?.length || 0;
+
+    // 🔥 ПЕРЕВІРКА НА ФЕРМЕРА (АБО АДМІНА) 🔥
+    const isFarmerOrAdmin = authData.isAuthenticated && (authData.role === 'FARMER' || authData.role === 'ADMIN');
 
     // Якщо дані аутентифікації ще не завантажені, показуємо заглушку
     if (isLoading || loadingData) {
@@ -82,7 +80,7 @@ export default function Header() {
                         <Link to="/" className="text-2xl md:text-3xl font-black text-green-600 tracking-tight whitespace-nowrap">FarmMarket</Link>
                     </div>
 
-                    {/* 🔥 ПОШУК (ЦЕНТР) 🔥 */}
+                    {/* ПОШУК (ЦЕНТР) */}
                     <div className="relative w-full md:max-w-md order-last md:order-none" ref={searchRef}>
                         <div className="relative">
                             <input
@@ -123,6 +121,13 @@ export default function Header() {
                         <nav className="hidden lg:flex items-center gap-6 font-medium text-gray-600">
                             <Link to="/" className="hover:text-green-500 transition">Головна</Link>
                             <Link to="/products" className="hover:text-green-500 transition">Каталог</Link>
+
+                            {/* 🔥 ПОСИЛАННЯ ДЛЯ ФЕРМЕРА (ДЕСКТОП) 🔥 */}
+                            {isFarmerOrAdmin && (
+                                <Link to="/farmer-dashboard" className="text-green-700 font-bold hover:text-green-900 transition flex items-center gap-1 bg-green-50 px-3 py-1 rounded-full">
+                                    👨‍🌾 Панель Фермера
+                                </Link>
+                            )}
                         </nav>
 
                         <div className="hidden md:block h-6 w-px bg-gray-300"></div>
@@ -140,15 +145,15 @@ export default function Header() {
                             </Link>
                         )}
 
-                        {/* 🔥 КНОПКА WISHLIST (ОБРАНЕ) 🔥 */}
+                        {/* WISHLIST */}
                         <Link to="/wishlist" className="relative text-gray-600 hover:text-red-500 transition p-1">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
                             {wishlistCount > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
-                  {wishlistCount}
-                </span>
+                                    {wishlistCount}
+                                </span>
                             )}
                         </Link>
 
@@ -159,8 +164,8 @@ export default function Header() {
                             </svg>
                             {getCartCount() > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-white">
-                  {getCartCount()}
-                </span>
+                                    {getCartCount()}
+                                </span>
                             )}
                         </Link>
                     </div>
@@ -171,7 +176,7 @@ export default function Header() {
             <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={closeMenu}></div>
             <div className={`fixed top-0 left-0 h-full w-80 bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-in-out overflow-y-auto ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-5 border-b flex justify-between items-center bg-green-50">
-                    <span className="text-xl font-bold text-gray-800">Категорії</span>
+                    <span className="text-xl font-bold text-gray-800">Меню</span>
                     <button onClick={closeMenu} className="text-gray-500 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
                 <div className="p-4">
@@ -182,12 +187,21 @@ export default function Header() {
                         ) : (
                             <Link to="/login" onClick={closeMenu} className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg text-gray-700 font-bold mb-4">🔑 Увійти</Link>
                         )}
+
                         <Link to="/" onClick={closeMenu} className="block py-2 text-lg font-medium text-gray-700 hover:text-green-600">🏠 Головна</Link>
                         <Link to="/products" onClick={closeMenu} className="block py-2 text-lg font-medium text-gray-700 hover:text-green-600">📦 Весь Каталог</Link>
+
+                        {/* 🔥 ПОСИЛАННЯ ДЛЯ ФЕРМЕРА (МОБІЛЬНЕ) 🔥 */}
+                        {isFarmerOrAdmin && (
+                            <Link to="/farmer-dashboard" onClick={closeMenu} className="block py-2 text-lg font-bold text-green-700 hover:text-green-900 bg-green-50 px-2 rounded">
+                                👨‍🌾 Панель Фермера
+                            </Link>
+                        )}
+
                         <Link to="/wishlist" onClick={closeMenu} className="block py-2 text-lg font-medium text-gray-700 hover:text-red-500">❤️ Обране</Link>
                     </div>
 
-                    <h3 className="text-gray-400 uppercase text-xs font-bold mb-3 tracking-wider">Продукти</h3>
+                    <h3 className="text-gray-400 uppercase text-xs font-bold mb-3 tracking-wider">Категорії</h3>
 
                     {loadingData ? (
                         <p className="text-sm text-gray-400">Завантаження категорій...</p>

@@ -1,5 +1,6 @@
 package com.productfarmmarket.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -27,6 +28,7 @@ public class User implements UserDetails {
     @Column(name = "email", unique = true) // <--- ВИПРАВЛЕННЯ: Додано унікальність
     private String email;
 
+    @JsonIgnore // <--- ВАЖЛИВО!
     private String passwd;
 
     // --- Методи UserDetails (існуючий код) ---

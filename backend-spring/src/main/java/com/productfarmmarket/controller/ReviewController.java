@@ -1,9 +1,13 @@
 package com.productfarmmarket.controller;
 
 import com.productfarmmarket.model.Review;
+import com.productfarmmarket.model.User;
 import com.productfarmmarket.repository.ReviewRepository;
+import com.productfarmmarket.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +18,8 @@ public class ReviewController {
 
     @Autowired
     private ReviewRepository reviewRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     // Отримання всіх відгуків - ДОСТУПНО УСІМ (Публічні дані)
     @GetMapping
@@ -25,7 +31,19 @@ public class ReviewController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Review createReview(@RequestBody Review review) {
-        // УВАГА: Тут має бути логіка встановлення поточного користувача як автора!
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        review.setUser(currentUser);
+        review.setCreatedAt(java.time.LocalDateTime.now()); // <--- ВСТАНОВЛЮЄМО ЧАС
+
+        // Важливо: завантажте Product з БД, щоб не було помилок
+        if(review.getProduct() != null && review.getProduct().getProductId() != null) {
+            // Тут можна додати перевірку на існування продукту
+        }
+
         return reviewRepository.save(review);
     }
 

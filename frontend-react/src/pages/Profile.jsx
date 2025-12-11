@@ -1,308 +1,210 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 // === КОМПОНЕНТ ОДНОГО ЗАМОВЛЕННЯ ===
-const OrderItem = ({ order, onDelete }) => {
+const OrderItem = ({ order }) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (window.confirm(`Видалити замовлення #${order.id}? Ця дія незворотна!`)) {
-            onDelete(order.id);
-        }
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
     };
 
     return (
-        <li className="border rounded-xl overflow-hidden bg-white transition hover:shadow-md group">
-            <div
-                onClick={() => setIsOpen(!isOpen)}
-                className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
-            >
+        <li className="border rounded-xl overflow-hidden bg-white transition hover:shadow-md group mb-4">
+            <div onClick={() => setIsOpen(!isOpen)} className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
                 <div>
                     <p className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                        Замовлення #{order.id}
+                        Замовлення #{order.orderId}
                         <span className="text-xs text-gray-400">{isOpen ? '▲' : '▼'}</span>
                     </p>
                     <p className="text-sm text-gray-500">
-                        {order.date} • <span className="text-green-600 bg-green-100 px-2 py-0.5 rounded text-xs font-bold uppercase">Виконано</span>
+                        {formatDate(order.orderDate)} •
+                        <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold uppercase ${order.deliveryStatus === 'COMPLETED' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                            {order.deliveryStatus || 'В обробці'}
+                        </span>
                     </p>
                 </div>
-
-                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                    <span className="block text-2xl font-bold text-green-600">{order.total} грн</span>
-
-                    <button
-                        onClick={handleDelete}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition opacity-0 group-hover:opacity-100"
-                        title="Видалити це замовлення"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
+                <div className="flex items-center gap-4">
+                    <span className="block text-2xl font-bold text-green-600">
+                        {order.totalAmount ? order.totalAmount.toFixed(2) : '0.00'} грн
+                    </span>
                 </div>
             </div>
-
             {isOpen && (
                 <div className="p-5 border-t border-gray-200 bg-white">
-                    <h4 className="text-sm font-bold text-gray-500 uppercase mb-3">Придбані товари:</h4>
-                    {order.items && order.items.length > 0 ? (
-                        <div className="space-y-3">
-                            {order.items.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <img src={item.image} alt={item.name} className="w-10 h-10 rounded object-cover border" />
-                                        <div><p className="text-sm font-bold text-gray-800">{item.name}</p><p className="text-xs text-gray-500">{item.price} грн / {item.unit}</p></div>
-                                    </div>
-                                    <div className="text-right text-sm"><span className="font-bold">x{item.quantity}</span><span className="ml-3 text-green-600 font-bold">{item.price * item.quantity} грн</span></div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (<p className="text-sm text-gray-400 italic">Деталі відсутні</p>)}
+                    <h4 className="text-sm font-bold text-gray-500 uppercase mb-3">Деталі доставки:</h4>
+                    <p className="text-sm text-gray-600 mb-2">Адреса: {order.deliveryAddress || 'Не вказана'}</p>
                 </div>
             )}
         </li>
     );
 };
 
-// 💡 ДОПОМІЖНА ФУНКЦІЯ: Форматування ролі та кольору
 const getRoleDisplay = (role) => {
     switch (role) {
-        case 'FARMER':
-            return { text: 'Продавець (Фермер)', color: 'text-lime-600' };
-        case 'CUSTOMER':
-            return { text: 'Покупець (Клієнт)', color: 'text-green-600' };
-        case 'ADMIN':
-            return { text: 'Адміністратор', color: 'text-red-600' };
-        default:
-            return { text: 'Невизначена роль', color: 'text-gray-500' };
+        case 'FARMER': return { text: 'Продавець (Фермер)', color: 'text-lime-600' };
+        case 'CUSTOMER': return { text: 'Покупець (Клієнт)', color: 'text-green-600' };
+        case 'ADMIN': return { text: 'Адміністратор', color: 'text-red-600' };
+        default: return { text: 'Користувач', color: 'text-gray-500' };
     }
 };
 
-// ----------------------------------------------------------------------
-// 💡 ГОЛОВНИЙ КОМПОНЕНТ PROFILE
-// ----------------------------------------------------------------------
 const Profile = () => {
-    const { user, logout, authData, fetchUserProfile, isLoading: isAuthLoading } = useUser();
+    const { user, logout, authData, updateUserProfile, isLoading: isAuthLoading } = useUser();
     const navigate = useNavigate();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isDataLoading, setIsDataLoading] = useState(false);
     const client = getAxiosClient();
 
+    const [orders, setOrders] = useState([]);
+    const [isEditing, setIsEditing] = useState(false); // 🔥 Відновлено
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Форма редагування
     const [formData, setFormData] = useState({
-        userId: null, firstName: '', lastName: '', numberPhone: '', email: '',
-        orders: [], wishlist: []
+        firstName: '',
+        lastName: '',
+        numberPhone: ''
     });
 
-    // 1. Оновлення стану форми при зміні даних користувача
+    // 1. Завантаження даних при старті
     useEffect(() => {
-        if (isAuthLoading) return;
-        if (!user) {
-            navigate('/login');
-        } else {
+        if (user) {
             setFormData({
-                userId: user.userId || authData.userId,
                 firstName: user.firstName || '',
                 lastName: user.lastName || '',
-                email: user.email || '',
-                numberPhone: user.numberPhone || '',
-                // Мок-поля для відображення
-                bannerColor: user.bannerColor || '#10b981',
-                bannerImage: user.bannerImage || '',
-                cardColor: user.cardColor || '#ffffff',
-                pageColor: user.pageColor || '#f9fafb',
-                orders: user.orders || [],
-                wishlist: user.wishlist || []
+                numberPhone: user.numberPhone || ''
             });
         }
-    }, [user, navigate, isAuthLoading, authData.userId]);
+        if (authData.isAuthenticated) {
+            client.get('/api/orders/my')
+                .then(res => setOrders(res.data))
+                .catch(err => console.error("Історія не завантажилась", err));
+        }
+    }, [user, authData.isAuthenticated]);
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-    // 3. ЗБЕРЕЖЕННЯ ПРОФІЛЮ (API PUT-ЗАПИТ)
+    // 2. Обробка збереження
     const handleSave = async () => {
-        setIsDataLoading(true);
-        try {
-            const userId = authData.userId;
-
-            const updateDto = {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                numberPhone: formData.numberPhone,
-            };
-
-            await client.put(`/api/users/${userId}`, updateDto);
-
-            toast.success('Профіль оновлено успішно!');
-
-            try {
-                // Оновлення контексту
-                await fetchUserProfile(authData.token);
-            } catch (profileError) {
-                console.error("Failed to refresh user profile after update:", profileError.response || profileError);
-                toast.warn("Дані збережено, але для відображення змін може знадобитися оновити сторінку.");
-            }
-
-            setIsEditing(false);
-
-        } catch (error) {
-            const backendMessage = error.response?.data?.message || 'Невідома помилка оновлення.';
-            toast.error(`Не вдалося оновити профіль: ${backendMessage}`);
-            console.error("Profile update error:", error.response || error);
-        } finally {
-            setIsDataLoading(false);
-        }
+        setIsSaving(true);
+        const success = await updateUserProfile(formData); // Ця функція є в UserContext
+        setIsSaving(false);
+        if (success) setIsEditing(false);
     };
 
-    // 4. ФУНКЦІЯ ВИДАЛЕННЯ ЗАМОВЛЕННЯ (API DELETE)
-    const deleteOrder = async (orderId) => {
-        try {
-            await client.delete(`/api/orders/${orderId}`);
-            toast.success('Замовлення видалено!');
+    if (isAuthLoading || !user) return <div className="text-center py-20">Завантаження...</div>;
 
-            await fetchUserProfile(authData.token);
-
-        } catch (error) {
-            toast.error("Не вдалося видалити замовлення.");
-            console.error("Order deletion error:", error);
-        }
-    };
-
-    const handleClearHistory = () => {
-        if (window.confirm("Ви впевнені, що хочете видалити ВСЮ історію замовлень?")) {
-            toast.error('Історія замовлень очищена (мок-логіка).');
-            setFormData(prev => ({...prev, orders: []}));
-        }
-    };
-
-
-    const handleCancel = () => {
-        // Логіка скасування повертає форму до початкового стану (з user)
-        setFormData({
-            userId: user.userId,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            numberPhone: user.numberPhone,
-            bannerColor: user.bannerColor || '#10b981',
-            bannerImage: user.bannerImage || '',
-            cardColor: user.cardColor || '#ffffff',
-            pageColor: user.pageColor || '#f9fafb',
-            orders: user.orders,
-            wishlist: user.wishlist
-        });
-        setIsEditing(false);
-    };
-
-    if (isAuthLoading || !user) return <div className="flex justify-center items-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div></div>;
-
-    const currentCardColor = isEditing ? formData.cardColor : (user.cardColor || '#ffffff');
-    const currentPageColor = isEditing ? formData.pageColor : (user.pageColor || '#f9fafb');
     const roleInfo = getRoleDisplay(authData.role);
 
-
     return (
-        <div className="min-h-[calc(100vh-80px)] py-8 transition-colors duration-500" style={{ backgroundColor: currentPageColor }}>
+        <div className="min-h-[calc(100vh-80px)] py-8 bg-gray-50">
             <div className="container mx-auto px-4">
-                <div className="rounded-3xl shadow-xl overflow-hidden mb-8 border border-gray-200 transition-colors duration-500" style={{ backgroundColor: currentCardColor }}>
+                <div className="rounded-3xl shadow-xl overflow-hidden mb-8 border border-gray-200 bg-white">
 
-                    <div className="h-48 md:h-64 w-full relative bg-cover bg-center transition-all duration-500"
-                         style={{ backgroundColor: formData.bannerColor, backgroundImage: formData.bannerImage ? `url(${formData.bannerImage})` : 'none' }}>
-                        {formData.bannerImage && <div className="absolute inset-0 bg-black/20"></div>}
-                    </div>
+                    {/* Зелений банер */}
+                    <div className="h-48 bg-green-500 w-full relative"></div>
 
                     <div className="px-6 md:px-10 pb-8">
-                        <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 mb-6 gap-6 relative z-10">
-                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
-                                <div className="w-full h-full bg-green-100 text-green-600 flex items-center justify-center text-5xl font-bold">{user.firstName.charAt(0).toUpperCase()}</div>
+                        <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 mb-6 gap-6">
+                            {/* Додано bg-white, z-10 та relative */}
+                            <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-white text-green-600 flex items-center justify-center text-5xl font-bold z-10 relative">
+                                {user.firstName?.charAt(0).toUpperCase()}
                             </div>
+
+                            {/* Заголовок профілю (коли не редагуємо) */}
                             {!isEditing && (
                                 <div className="text-center md:text-left mb-2">
                                     <h1 className="text-3xl font-black text-gray-800">{user.firstName} {user.lastName}</h1>
                                     <p className="text-gray-500 font-medium">{user.email}</p>
                                 </div>
                             )}
+
                             <div className="ml-auto">
                                 {!isEditing && (
-                                    <button onClick={() => setIsEditing(true)} className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg flex items-center gap-2">✏️ Редагувати</button>
+                                    <button onClick={() => setIsEditing(true)} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-800 transition">
+                                        ✏️ Редагувати
+                                    </button>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex justify-center">
-                            {isEditing ? (
-                                <div className="p-6 rounded-2xl border border-gray-200 animate-fadeIn backdrop-blur-sm bg-gray-50/80 max-w-3xl w-full">
-
-                                    <div className="space-y-4">
-                                        <h3 className="font-bold text-gray-700 border-b pb-2">👤 Дані (API)</h3>
-                                        <div><label className="text-xs text-gray-500 font-bold uppercase">Ім'я</label><input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
-                                        <div><label className="text-xs text-gray-500 font-bold uppercase">Прізвище</label><input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
-                                        <div><label className="text-xs text-gray-500 font-bold uppercase">Телефон</label><input type="text" name="numberPhone" value={formData.numberPhone} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-white"/></div>
-                                        <div><label className="text-xs text-gray-500 font-bold uppercase">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full border p-3 rounded-lg mt-1 bg-gray-200 cursor-not-allowed" disabled/></div>
+                        {/* 🔥 ФОРМА РЕДАГУВАННЯ 🔥 */}
+                        {isEditing ? (
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-green-200 mb-8 max-w-2xl mx-auto">
+                                <h3 className="font-bold text-lg mb-4 text-gray-700">Редагування профілю</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Ім'я</label>
+                                        <input
+                                            value={formData.firstName}
+                                            onChange={e => setFormData({...formData, firstName: e.target.value})}
+                                            className="w-full border p-2 rounded-lg"
+                                        />
                                     </div>
-
-                                    <div className="flex justify-end gap-3 mt-6 border-t pt-4">
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={isDataLoading}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl font-bold transition shadow-lg disabled:bg-gray-400"
-                                        >
-                                            {isDataLoading ? 'Збереження...' : 'Зберегти'}
-                                        </button>
-                                        <button onClick={handleCancel} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2 rounded-xl font-bold transition">Скасувати</button>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Прізвище</label>
+                                        <input
+                                            value={formData.lastName}
+                                            onChange={e => setFormData({...formData, lastName: e.target.value})}
+                                            className="w-full border p-2 rounded-lg"
+                                        />
                                     </div>
-
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 w-full">
-                                    <div className="md:col-span-1 space-y-6">
-                                        <div className="bg-gray-50/80 backdrop-blur-sm p-5 rounded-2xl border border-gray-200">
-                                            <h4 className="font-bold text-gray-700 mb-4">Контактна інформація</h4>
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <p className="text-xs text-gray-400 uppercase">Телефон</p>
-                                                    <p className="font-medium text-gray-800">{user.numberPhone || '—'}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 uppercase">Роль</p>
-                                                    <p className={`font-medium ${roleInfo.color}`}>{roleInfo.text}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => { logout(); navigate('/'); }} className="w-full border border-red-200 text-red-500 hover:bg-red-50 font-bold py-3 rounded-xl transition">Вийти з акаунту</button>
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                            <h3 className="text-xl font-bold text-gray-800">Історія замовлень</h3>
-                                            {user.orders && user.orders.length > 0 && (
-                                                <button
-                                                    onClick={handleClearHistory}
-                                                    className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg transition font-bold flex items-center gap-1"
-                                                >
-                                                    🗑 Очистити все (Мок)
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {user.orders && user.orders.length > 0 ? (
-                                            <ul className="space-y-4">
-                                                {formData.orders.map(order => (
-                                                    <OrderItem key={order.id} order={order} onDelete={deleteOrder} />
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="text-center py-12 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400">
-                                                <p className="text-lg">Історія замовлень порожня (Мок)</p>
-                                            </div>
-                                        )}
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Телефон</label>
+                                        <input
+                                            value={formData.numberPhone}
+                                            onChange={e => setFormData({...formData, numberPhone: e.target.value})}
+                                            className="w-full border p-2 rounded-lg"
+                                        />
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                                <div className="flex gap-3 mt-6 justify-end">
+                                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition">Скасувати</button>
+                                    <button onClick={handleSave} disabled={isSaving} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">
+                                        {isSaving ? 'Збереження...' : 'Зберегти зміни'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Звичайний вигляд (коли не редагуємо)
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 w-full">
+                                <div className="md:col-span-1 space-y-6">
+                                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                                        <h4 className="font-bold text-gray-700 mb-4">Контактна інформація</h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Телефон</p>
+                                                <p className="font-medium text-gray-800">{user.numberPhone || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-400 uppercase">Роль</p>
+                                                <p className={`font-medium ${roleInfo.color}`}>{roleInfo.text}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => { logout(); navigate('/'); }} className="w-full border border-red-200 text-red-500 hover:bg-red-50 font-bold py-3 rounded-xl transition">
+                                        Вийти з акаунту
+                                    </button>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">Історія замовлень</h3>
+                                    {orders.length > 0 ? (
+                                        <ul className="space-y-4">
+                                            {orders.map(order => (
+                                                <OrderItem key={order.orderId} order={order} />
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400">
+                                            <p className="text-lg">Історія замовлень порожня</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

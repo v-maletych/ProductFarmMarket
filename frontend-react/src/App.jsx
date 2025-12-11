@@ -19,6 +19,8 @@ import NotFound from './pages/NotFound.jsx';
 import Auth from './pages/Auth.jsx';
 import Profile from './pages/Profile.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import FarmerDashboard from './pages/FarmerDashboard';
+import ProductForm from './pages/ProductForm';
 
 
 // -----------------------------------------------------------------------------
@@ -85,6 +87,25 @@ export default function App() {
                     <Route path="/login" element={<Auth />} />
                     <Route path="/register" element={<Auth />} />
 
+                    {/* Сторінки Фермера */}
+                    <Route path="/farmer-dashboard" element={
+                        <ProtectedRoute allowedRoles={['FARMER', 'ADMIN']}>
+                            <FarmerDashboard />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/farmer/add-product" element={
+                        <ProtectedRoute allowedRoles={['FARMER', 'ADMIN']}>
+                            <ProductForm />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/farmer/edit-product/:id" element={
+                        <ProtectedRoute allowedRoles={['FARMER', 'ADMIN']}>
+                            <ProductForm />
+                        </ProtectedRoute>
+                    } />
+
                     {/* Захищені маршрути */}
                     <Route path="/checkout" element={<ProtectedRoute allowedRoles={['CUSTOMER', 'FARMER', 'ADMIN']}><Checkout /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute allowedRoles={['CUSTOMER', 'FARMER', 'ADMIN']}><Profile /></ProtectedRoute>} />
@@ -95,6 +116,8 @@ export default function App() {
 
                     {/* Помилка 404 */}
                     <Route path="*" element={<NotFound />} />
+
+
                 </Routes>
             </main>
 

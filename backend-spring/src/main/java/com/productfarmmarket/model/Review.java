@@ -1,14 +1,14 @@
 package com.productfarmmarket.model;
 
 import com.productfarmmarket.enums.Raiting;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-
-import java.security.Timestamp;
-import java.util.Date;
+import java.time.LocalDateTime; // <--- ПРАВИЛЬНИЙ ІМПОРТ
 
 @Entity
 @Table(name = "reviews")
 public class Review {
+    // ... (поля id, product, user, raiting залишаються без змін) ...
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "review_id")
@@ -26,53 +26,22 @@ public class Review {
     private Raiting raiting;
 
     private String comment;
-    private Timestamp createdAt;
 
-    public Long getReviewId() {
-        return reviewId;
-    }
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt; // <--- Змінено з Timestamp
 
-    public void setReviewId(Long reviewId) {
-        this.reviewId = reviewId;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public Raiting getRaiting() {
-        return raiting;
-    }
-
-    public void setRaiting(Raiting raiting) {
-        this.raiting = raiting;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
+    // Геттери та Сеттери...
+    // (Додайте їх для всіх полів)
+    public Long getReviewId() { return reviewId; }
+    public void setReviewId(Long reviewId) { this.reviewId = reviewId; }
+    public Product getProduct() { return product; }
+    public void setProduct(Product product) { this.product = product; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public Raiting getRaiting() { return raiting; }
+    public void setRaiting(Raiting raiting) { this.raiting = raiting; }
+    public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

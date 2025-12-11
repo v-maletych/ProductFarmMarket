@@ -1,5 +1,6 @@
 package com.productfarmmarket.controller;
 
+import com.productfarmmarket.enums.DeliveryStatus;
 import com.productfarmmarket.model.Order;
 import com.productfarmmarket.model.User;
 import com.productfarmmarket.repository.OrderRepository;
@@ -33,15 +34,16 @@ public class OrderController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Order createOrder(@RequestBody Order order) {
-        // Логіка встановлення поточного користувача як покупця
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
 
         User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found in database."));
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
-        // Встановлюємо користувача-покупця
         order.setUser(currentUser);
+        order.setOrderDate(java.time.LocalDateTime.now()); // <--- ВСТАНОВЛЮЄМО ЧАС
+        order.setDeliveryStatus(com.productfarmmarket.enums.DeliveryStatus.IN_PROGRESS);
+        order.setPaymentStatus(true); // Або логіка оплати
 
         return orderRepository.save(order);
     }
@@ -62,6 +64,52 @@ public class OrderController {
         existingOrder.setPaymentStatus(order.getPaymentStatus());
         // ... оновлення інших полів
         return orderRepository.save(existingOrder);
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public List<Order> getMyOrders() {
+        // 1. Отримуємо email поточного користувача
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        // 2. Знаходимо юзера в базі
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 3. Шукаємо всі замовлення цього юзера
+        // УВАГА: Переконайтеся, що у вас є метод findByUser в OrderRepository (див. нижче)
+        return orderRepository.findByUser(currentUser);
+    }
+
+    // 1. Отримання вхідних замовлень (для ФЕРМЕРА)
+    @GetMapping("/incoming")
+    @PreAuthorize("hasAnyAuthority('FARMER', 'ADMIN')")
+    public List<Order> getIncomingOrders() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        User currentFarmer = userRepository.findByEmail(userEmail).orElseThrow();
+
+        return orderRepository.findOrdersByFarmer(currentFarmer);
+    }
+
+    // 2. Зміна статусу замовлення (для ФЕРМЕРА)
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyAuthority('FARMER', 'ADMIN')")
+    public Order updateOrderStatus(@PathVariable Long id, @RequestBody String status) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Тут проста логіка: беремо рядок, чистимо від лапок і перетворюємо в ENUM
+        String cleanStatus = status.replace("\"", "").trim();
+
+        try {
+            order.setDeliveryStatus(DeliveryStatus.valueOf(cleanStatus));
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + cleanStatus);
+        }
+
+        return orderRepository.save(order);
     }
 
     // Видалення замовлення - ТІЛЬКИ ADMIN
