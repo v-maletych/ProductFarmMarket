@@ -17,6 +17,7 @@ public class ProductResponse {
     private Long categoryId;
 
     private String categoryName;
+    private String image;
 
     // Конструктор, який приймає об'єкт Product і копіює лише потрібні поля
     public ProductResponse(Product product) {
@@ -26,18 +27,22 @@ public class ProductResponse {
         this.price = product.getPrice();
         this.inStock = product.getInStock();
 
-        // Перевірка на null для User
+        // 🔥 Копіюємо з моделі
+        this.image = product.getImage();
+
         if (product.getUser() != null) {
             this.ownerId = product.getUser().getUserId();
             this.ownerName = product.getUser().getFirstName() + " " + product.getUser().getLastName();
         }
-
-        // 🔥 КРИТИЧНА ЗМІНА: КОПІЮЄМО ID та Name 🔥
         if (product.getCategory() != null) {
-            this.categoryId = product.getCategory().getCategoryId(); // <-- КОПІЮЄМО ID
+            this.categoryId = product.getCategory().getCategoryId();
             this.categoryName = product.getCategory().getName();
         }
     }
+
+    // 🔥 Додаємо Геттер і Сеттер
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
 
     // --- Геттери та Сеттери ---
     public Long getProductId() { return productId; }

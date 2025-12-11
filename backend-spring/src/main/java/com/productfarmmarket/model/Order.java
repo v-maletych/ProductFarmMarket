@@ -1,9 +1,11 @@
 package com.productfarmmarket.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference; // Для уникнення циклів
 import com.productfarmmarket.enums.DeliveryStatus;
-import com.fasterxml.jackson.annotation.JsonFormat; // Додайте jackson-annotations у pom.xml якщо немає
 import jakarta.persistence.*;
-import java.time.LocalDateTime; // <--- ПРАВИЛЬНИЙ ІМПОРТ
+import java.time.LocalDateTime;
+import java.util.List; // <--- Імпорт
 
 @Entity
 @Table(name = "orders")
@@ -17,7 +19,6 @@ public class Order {
     @JoinColumn(name = "user_id")
     private User user;
 
-    // Встановлюємо формат дати для JSON
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
     private LocalDateTime orderDate;
 
@@ -25,12 +26,22 @@ public class Order {
     private DeliveryStatus deliveryStatus;
 
     private Boolean paymentStatus;
-
-    // Нове поле для суми (ви використовуєте його на фронтенді)
     private Double totalAmount;
     private String deliveryAddress;
 
-    // Геттери та Сеттери
+    // 🔥 ДОДАЙТЕ ЦЕЙ БЛОК 🔥
+    // cascade = CascadeType.ALL означає: "Якщо зберігаєш Замовлення, збережи і його Товари"
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    @JsonManagedReference // Це допомагає JSON правильно серіалізувати список
+    private List<OrderItem> orderItems;
+
+    // ... Геттери та Сеттери ...
+    // (Додайте геттер і сеттер для orderItems)
+
+    public List<OrderItem> getOrderItems() { return orderItems; }
+    public void setOrderItems(List<OrderItem> orderItems) { this.orderItems = orderItems; }
+
+    // ... решта геттерів (getOrderId, getUser тощо) залишаються без змін ...
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
     public User getUser() { return user; }

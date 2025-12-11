@@ -38,13 +38,22 @@ public class OrderController {
         String userEmail = authentication.getName();
 
         User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found in database."));
 
+        // 1. Заповнюємо дані замовлення
         order.setUser(currentUser);
-        order.setOrderDate(java.time.LocalDateTime.now()); // <--- ВСТАНОВЛЮЄМО ЧАС
+        order.setOrderDate(java.time.LocalDateTime.now());
         order.setDeliveryStatus(com.productfarmmarket.enums.DeliveryStatus.IN_PROGRESS);
-        order.setPaymentStatus(true); // Або логіка оплати
+        order.setPaymentStatus(true);
 
+        // 🔥 2. КРИТИЧНО ВАЖЛИВО: Прив'язуємо кожен товар до цього замовлення
+        if (order.getOrderItems() != null) {
+            for (com.productfarmmarket.model.OrderItem item : order.getOrderItems()) {
+                item.setOrder(order); // Встановлюємо зв'язок: Item -> Order
+            }
+        }
+
+        // 3. Зберігаємо (завдяки CascadeType.ALL збережуться і order_items)
         return orderRepository.save(order);
     }
 

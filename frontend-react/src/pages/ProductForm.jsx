@@ -4,26 +4,26 @@ import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 const ProductForm = () => {
-    const { id } = useParams(); // Якщо є id - це редагування
+    const { id } = useParams();
     const navigate = useNavigate();
     const client = getAxiosClient();
     const isEditMode = !!id;
 
     const [categories, setCategories] = useState([]);
+    const [isUploading, setIsUploading] = useState(false); // Стан завантаження фото
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         price: '',
         inStock: true,
-        category: null, // Об'єкт або ID
-        unit: 'кг' // Додайте поле unit в модель Product на бекенді, якщо його немає, або ігноруйте
+        category: '',
+        image: '' // Поле для URL картинки
     });
 
     useEffect(() => {
-        // Завантаження категорій
         client.get('/api/categories').then(res => setCategories(res.data));
 
-        // Якщо редагування - завантажуємо дані товару
         if (isEditMode) {
             client.get(`/api/products/${id}`).then(res => {
                 const p = res.data;
@@ -32,24 +32,49 @@ const ProductForm = () => {
                     description: p.description,
                     price: p.price,
                     inStock: p.inStock,
-                    category: p.categoryId, // Або p.category.categoryId залежно від DTO
-                    unit: p.unit || 'кг'
+                    category: p.categoryId,
+                    image: p.image || '' // Завантажуємо існуюче фото
                 });
             });
         }
     }, [id]);
 
+    // 🔥 ФУНКЦІЯ ЗАВАНТАЖЕННЯ ФОТО 🔥
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+
+        setIsUploading(true);
+        try {
+            // Відправляємо файл на наш новий контролер
+            const res = await client.post('/api/upload', uploadData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            // Сервер повертає URL (наприклад, /images/uuid.jpg)
+            setFormData(prev => ({ ...prev, image: res.data }));
+            toast.success("Фото завантажено!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Помилка завантаження фото");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Формуємо об'єкт для відправки
             const payload = {
                 name: formData.name,
                 description: formData.description,
                 price: parseFloat(formData.price),
                 inStock: formData.inStock,
-                // Бекенд очікує об'єкт Category
-                category: { categoryId: formData.category }
+                category: { categoryId: formData.category },
+                image: formData.image // Відправляємо URL фото разом з товаром
             };
 
             if (isEditMode) {
@@ -61,7 +86,6 @@ const ProductForm = () => {
             }
             navigate('/farmer-dashboard');
         } catch (error) {
-            console.error(error);
             toast.error("Помилка збереження.");
         }
     };
@@ -70,6 +94,29 @@ const ProductForm = () => {
         <div className="container mx-auto px-4 py-10 max-w-2xl">
             <h1 className="text-3xl font-bold mb-6">{isEditMode ? 'Редагувати Товар' : 'Новий Товар'}</h1>
             <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg space-y-4">
+
+                {/* --- БЛОК ЗАВАНТАЖЕННЯ ФОТО --- */}
+                <div className="mb-4">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Фото товару</label>
+
+                    <div className="flex items-center gap-4">
+                        {/* Прев'ю */}
+                        <div className="w-24 h-24 border rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {formData.image ? (
+                                <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">Немає фото</div>
+                            )}
+                        </div>
+
+                        {/* Кнопка */}
+                        <label className="cursor-pointer bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-100 transition">
+                            {isUploading ? 'Завантаження...' : 'Обрати файл'}
+                            <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
+                        </label>
+                    </div>
+                </div>
+                {/* --------------------------------- */}
 
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Назва</label>
@@ -100,7 +147,7 @@ const ProductForm = () => {
                     <label htmlFor="stock" className="text-gray-700 font-medium">Товар в наявності</label>
                 </div>
 
-                <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition">
+                <button type="submit" disabled={isUploading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition disabled:bg-gray-400">
                     {isEditMode ? 'Зберегти Зміни' : 'Створити Товар'}
                 </button>
             </form>

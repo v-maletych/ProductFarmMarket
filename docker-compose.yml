@@ -30,6 +30,9 @@ services:
       - db
     networks:
       - app-network
+    volumes:
+      # Мапимо папку uploads у контейнері на папку uploads на вашому комп'ютері
+      - ./uploads:/app/uploads
 
   frontend:
     build: ./frontend-react

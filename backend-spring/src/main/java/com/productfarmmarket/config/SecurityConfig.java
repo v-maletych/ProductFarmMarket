@@ -42,6 +42,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/products", "/api/products/**",
                                 "/api/categories", "/api/categories/**",
                                 "/api/reviews").permitAll()
+                        .requestMatchers("/images/**").permitAll()
+
+                        // 2. Дозволяємо завантаження (краще захистити, але для тестів можна відкрити або лишити authenticated)
+                        .requestMatchers("/api/upload").authenticated() // Тільки для тих хто увійшов
                         // 3. Усі інші запити вимагають аутентифікації
                         .anyRequest().authenticated()
                 )

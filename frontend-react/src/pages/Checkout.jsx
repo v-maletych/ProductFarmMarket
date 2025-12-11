@@ -66,7 +66,7 @@ const Checkout = () => {
 
         const orderDto = {
             orderItems: cartItems.map(item => ({
-                productId: item.id,
+                product: { productId: item.id }, // <--- 🔥 ВИПРАВЛЕННЯ 🔥
                 quantity: item.quantity,
                 price: item.price
             })),
