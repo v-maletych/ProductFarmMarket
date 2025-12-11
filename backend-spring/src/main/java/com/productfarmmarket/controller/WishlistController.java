@@ -1,16 +1,18 @@
 package com.productfarmmarket.controller;
 
+import com.productfarmmarket.model.Product;
+import com.productfarmmarket.model.User;
 import com.productfarmmarket.model.Wishlist;
-import com.productfarmmarket.model.User; // Імпорт
+import com.productfarmmarket.repository.ProductRepository;
+import com.productfarmmarket.repository.UserRepository;
 import com.productfarmmarket.repository.WishlistRepository;
-import com.productfarmmarket.repository.UserRepository; // Імпорт
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/wishlist")
@@ -18,40 +20,34 @@ public class WishlistController {
 
     @Autowired
     private WishlistRepository wishlistRepository;
-
     @Autowired
-    private UserRepository userRepository; // <-- ДОДАНО ДЛЯ ЗНАХОДЖЕННЯ ПОТОЧНОГО КОРИСТУВАЧА
+    private UserRepository userRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
-    // Отримання всіх елементів - ТІЛЬКИ ADMIN
-    @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public List<Wishlist> getAllWishlistItems() {
-        return wishlistRepository.findAll();
-    }
-
-    // Додавання продукту до списку - АВТЕНТИФІКОВАНИЙ КОРИСТУВАЧ
-    @PostMapping
+    // 🔥 ГОЛОВНИЙ МЕТОД: TOGGLE (Додати/Видалити)
+    @PostMapping("/toggle/{productId}")
     @PreAuthorize("isAuthenticated()")
-    public Wishlist addToWishlist(@RequestBody Wishlist wishlist) {
+    public ResponseEntity<String> toggleWishlist(@PathVariable Long productId) {
+        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // --- ЛОГІКА ВСТАНОВЛЕННЯ ВЛАСНИКА ---
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getName();
+        // Перевіряємо, чи є вже в списку
+        Optional<Wishlist> existingItem = wishlistRepository.findByUserAndProduct(user, product);
 
-        User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found in database."));
-
-        wishlist.setUser(currentUser); // Встановлюємо поточного користувача як власника
-        // --- КІНЕЦЬ ЛОГІКИ ---
-
-        return wishlistRepository.save(wishlist);
-    }
-
-    // Видалення продукту зі списку - АДМІН АБО ВЛАСНИК
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN') or @wishlistOwnershipService.isOwner(#id, principal.userId)")
-    public void removeFromWishlist(@PathVariable Long id) {
-        Wishlist wishlist = wishlistRepository.findById(id).orElseThrow(() -> new RuntimeException("Wishlist item not found"));
-        wishlistRepository.delete(wishlist);
+        if (existingItem.isPresent()) {
+            // ЯКЩО Є -> ВИДАЛЯЄМО
+            wishlistRepository.delete(existingItem.get());
+            return ResponseEntity.ok("REMOVED");
+        } else {
+            // ЯКЩО НЕМАЄ -> ДОДАЄМО
+            Wishlist newItem = new Wishlist();
+            newItem.setUser(user);
+            newItem.setProduct(product);
+            wishlistRepository.save(newItem);
+            return ResponseEntity.ok("ADDED");
+        }
     }
 }

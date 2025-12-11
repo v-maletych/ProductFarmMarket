@@ -195,7 +195,34 @@ export const UserProvider = ({ children }) => {
             toast.error("Увійдіть, щоб додати в обране");
             return;
         }
-        toast("Логіка API Wishlist працює (MOCK)", { icon: '❤️' });
+
+        const productId = product.productId || product.id; // Страховка ID
+
+        try {
+            // 1. Викликаємо наш новий "Toggle" ендпоінт
+            const response = await getAxiosClient().post(`/api/wishlist/toggle/${productId}`);
+
+            // 2. Оновлюємо локальний стан інтерфейсу без перезавантаження сторінки
+            if (response.data === 'ADDED') {
+                toast.success("Додано в обране ❤️");
+                // Додаємо товар в локальний список
+                setUserProfile(prev => ({
+                    ...prev,
+                    wishlist: [...(prev.wishlist || []), product]
+                }));
+            } else {
+                toast.success("Видалено з обраного 💔");
+                // Видаляємо товар з локального списку
+                setUserProfile(prev => ({
+                    ...prev,
+                    wishlist: (prev.wishlist || []).filter(item => item.productId !== productId)
+                }));
+            }
+
+        } catch (error) {
+            console.error("Wishlist error:", error);
+            toast.error("Помилка оновлення списку бажань");
+        }
     };
 
     const addOrderToHistory = (orderData) => {
