@@ -24,28 +24,70 @@ public class Product {
     private Double price;
     private Boolean inStock;
 
-    // 🔥 ДОДАЄМО ПОЛЕ ДЛЯ ФОТО 🔥
-    // (використовуємо columnDefinition="TEXT", щоб влізли довгі URL)
     @Column(columnDefinition = "TEXT")
     private String image;
 
-    // ... Геттери та Сеттери ...
-    public Long getProductId() { return productId; }
-    public void setProductId(Long productId) { this.productId = productId; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-    public Category getCategory() { return category; }
-    public void setCategory(Category category) { this.category = category; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
-    public Boolean getInStock() { return inStock; }
-    public void setInStock(Boolean inStock) { this.inStock = inStock; }
+    public Long getProductId() {
+        return productId;
+    }
 
-    // Геттер і Сеттер для Image
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public Boolean getInStock() {
+        return inStock;
+    }
+
+    public void setInStock(Boolean inStock) {
+        this.inStock = inStock;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
 }

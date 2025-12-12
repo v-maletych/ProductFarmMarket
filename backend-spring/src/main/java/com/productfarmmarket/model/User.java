@@ -25,13 +25,11 @@ public class User implements UserDetails {
     private String lastName;
     private String numberPhone;
 
-    @Column(name = "email", unique = true) // <--- ВИПРАВЛЕННЯ: Додано унікальність
+    @Column(name = "email", unique = true)
     private String email;
 
-    @JsonIgnore // <--- ВАЖЛИВО!
+    @JsonIgnore
     private String passwd;
-
-    // --- Методи UserDetails (існуючий код) ---
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -48,25 +46,79 @@ public class User implements UserDetails {
         return email;
     }
 
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
-    // --- Геттери та Сеттери (існуючий код) ---
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-    public String getNumberPhone() { return numberPhone; }
-    public void setNumberPhone(String numberPhone) { this.numberPhone = numberPhone; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPasswd() { return passwd; }
-    public void setPasswd(String passwd) { this.passwd = passwd; }
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getNumberPhone() {
+        return numberPhone;
+    }
+
+    public void setNumberPhone(String numberPhone) {
+        this.numberPhone = numberPhone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPasswd() {
+        return passwd;
+    }
+
+    public void setPasswd(String passwd) {
+        this.passwd = passwd;
+    }
 }

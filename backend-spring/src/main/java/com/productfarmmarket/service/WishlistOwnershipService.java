@@ -3,7 +3,7 @@ package com.productfarmmarket.service;
 import com.productfarmmarket.repository.WishlistRepository;
 import org.springframework.stereotype.Service;
 
-@Service("wishlistOwnershipService") // Назва біна для SpEL
+@Service("wishlistOwnershipService")
 public class WishlistOwnershipService {
 
     private final WishlistRepository wishlistRepository;
@@ -12,9 +12,6 @@ public class WishlistOwnershipService {
         this.wishlistRepository = wishlistRepository;
     }
 
-    /**
-     * Перевіряє, чи є користувач (userId) власником елемента списку бажань (wishlistId).
-     */
     public boolean isOwner(Long wishlistId, Long userId) {
         return wishlistRepository.findById(wishlistId)
                 .map(wishlist -> wishlist.getUser() != null && wishlist.getUser().getUserId().equals(userId))

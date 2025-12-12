@@ -1,21 +1,21 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { useMarketData } from '../context/MarketDataContext'; // <-- НОВИЙ ІМПОРТ API
+import {useMarketData} from '../context/MarketDataContext';
 import heroBgImage from '../assets/hero-storefront.jpg';
 
 const Home = () => {
-    const { products, loadingData } = useMarketData(); // <-- Отримуємо продукти з API
+    const {products, loadingData} = useMarketData();
 
     return (
         <>
-            {/* ===== HERO БЛОК (Без змін) ===== */}
             <div
                 className="relative h-[90vh] bg-cover bg-center"
-                style={{ backgroundImage: `url(${heroBgImage})` }}
+                style={{backgroundImage: `url(${heroBgImage})`}}
             >
-                <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center p-4">
-                    {/* Затемнення */}
+                <div
+                    className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center p-4">
+
                     <div className="absolute inset-0 bg-black/50"></div>
 
                     <div className="relative z-20 max-w-4xl">
@@ -47,8 +47,6 @@ const Home = () => {
                     </div>
                 </div>
             </div>
-
-            {/* ===== СЕКЦІЯ ПОПУЛЯРНІ ТОВАРИ (API) ===== */}
             <div className="py-20 bg-white">
                 <div className="container mx-auto px-4">
 
@@ -65,18 +63,17 @@ const Home = () => {
                     </div>
 
                     {loadingData ? (
-                        <div className="text-center py-10"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div><p className="mt-4 text-gray-600">Завантаження хітів...</p></div>
+                        <div className="text-center py-10">
+                            <div
+                                className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div>
+                            <p className="mt-4 text-gray-600">Завантаження хітів...</p></div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                            {/* Беремо перші 4 товари з API для вітрини */}
                             {products.slice(0, 4).map(product => (
-                                // Використовуємо ProductCard з даними DTO
-                                <ProductCard key={product.productId} product={product} />
+                                <ProductCard key={product.productId} product={product}/>
                             ))}
                         </div>
                     )}
-
-                    {/* Кнопка для мобільних */}
                     <div className="text-center mt-12 md:hidden">
                         <Link
                             to="/products"
@@ -87,26 +84,27 @@ const Home = () => {
                     </div>
                 </div>
             </div>
-
-            {/* ===== СЕКЦІЯ ПЕРЕВАГ (Без змін) ===== */}
             <div className="py-16 bg-green-50 border-t border-green-100">
                 <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                     <div className="p-6">
-                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                        <div
+                            className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                             🚚
                         </div>
                         <h3 className="text-xl font-bold mb-2">Швидка Доставка</h3>
                         <p className="text-gray-600">Доставляємо замовлення день у день, щоб зберегти свіжість.</p>
                     </div>
                     <div className="p-6">
-                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                        <div
+                            className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                             🥬
                         </div>
                         <h3 className="text-xl font-bold mb-2">Тільки Свіже</h3>
                         <p className="text-gray-600">Ніяких складів. Продукти їдуть до вас прямо з грядки.</p>
                     </div>
                     <div className="p-6">
-                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                        <div
+                            className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                             ❤️
                         </div>
                         <h3 className="text-xl font-bold mb-2">З Любов'ю</h3>

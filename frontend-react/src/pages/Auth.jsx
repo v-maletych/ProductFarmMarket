@@ -1,31 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {Link, useLocation, useNavigate} from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-import baseClient from '../api/axiosClient'; // <-- Клієнт без токена
-import { useUser } from '../context/UserContext'; // <-- Контекст для login/logout
+import baseClient from '../api/axiosClient';
+import {useUser} from '../context/UserContext';
 
-const API_URL = '/api/auth'; // Базовий URL для аутентифікації
-
-// ----------------------------------------------------------------------
-// 1. КОМПОНЕНТ РЕЄСТРАЦІЇ
-// ----------------------------------------------------------------------
+const API_URL = '/api/auth';
 const RegisterForm = () => {
-    // ВАЖЛИВО: Додано selectedRole
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         password: '',
         numberPhone: '',
-        selectedRole: 'CUSTOMER' // <--- НОВЕ: Роль за замовчуванням
+        selectedRole: 'CUSTOMER' //
     });
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFormData({...formData, [e.target.name]: e.target.value});
     };
 
     const handleRegister = async (e) => {
@@ -34,21 +29,17 @@ const RegisterForm = () => {
         setIsSubmitting(true);
 
         try {
-            // POST /api/auth/register
-            // Відправляємо formData, яке тепер містить selectedRole: 'CUSTOMER' або 'FARMER'
             const response = await baseClient.post(`${API_URL}/register`, formData);
 
             if (response.data && response.data.token) {
                 toast.success("Реєстрація успішна! Тепер увійдіть.");
-                navigate('/login'); // Перенаправляємо на вхід
+                navigate('/login');
             }
 
         } catch (err) {
-            // ... (обробка помилок)
             if (err.response?.status === 409 || (err.response?.data?.message && err.response.data.message.includes("Email already exists"))) {
                 setError('Користувач з цією поштою вже існує.');
             } else if (err.response?.data?.message) {
-                // Включимо повідомлення про помилку ролі, якщо воно є
                 setError(err.response.data.message);
             } else {
                 setError('Помилка реєстрації. Перевірте дані та зв\'язок з бекендом.');
@@ -63,8 +54,6 @@ const RegisterForm = () => {
         <form onSubmit={handleRegister} className="space-y-5">
             <h2 className="text-3xl font-bold text-green-600">Реєстрація</h2>
             {error && <p className="bg-red-100 text-red-600 p-3 rounded-lg text-sm">{error}</p>}
-
-            {/* Ім'я */}
             <input
                 type="text"
                 name="firstName"
@@ -74,8 +63,6 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Ім'я"
             />
-
-            {/* Прізвище */}
             <input
                 type="text"
                 name="lastName"
@@ -85,8 +72,6 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Прізвище"
             />
-
-            {/* Номер телефону */}
             <input
                 type="text"
                 name="numberPhone"
@@ -96,8 +81,6 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Номер телефону"
             />
-
-            {/* Email */}
             <input
                 type="email"
                 name="email"
@@ -107,8 +90,6 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Email"
             />
-
-            {/* Пароль */}
             <input
                 type="password"
                 name="password"
@@ -118,13 +99,9 @@ const RegisterForm = () => {
                 className="w-full border p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                 placeholder="Пароль"
             />
-
-            {/* 🔥 НОВИЙ БЛОК: Вибір ролі 🔥 */}
             <div className="space-y-2 pt-2">
                 <label className="block text-sm font-semibold text-gray-700">Я хочу зареєструватися як:</label>
                 <div className="flex space-x-4">
-
-                    {/* Покупець (CUSTOMER) */}
                     <label
                         className={`flex items-center p-3 rounded-lg border cursor-pointer w-1/2 transition ${formData.selectedRole === 'CUSTOMER' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
                     >
@@ -141,8 +118,6 @@ const RegisterForm = () => {
                             <span className="text-xs text-gray-500">Купую товари на ринку.</span>
                         </div>
                     </label>
-
-                    {/* Продавець (FARMER) */}
                     <label
                         className={`flex items-center p-3 rounded-lg border cursor-pointer w-1/2 transition ${formData.selectedRole === 'FARMER' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
                     >
@@ -173,19 +148,15 @@ const RegisterForm = () => {
         </form>
     );
 };
-
-// ----------------------------------------------------------------------
-// 2. КОМПОНЕНТ ВХОДУ (Залишається без змін, оскільки він коректний)
-// ----------------------------------------------------------------------
 const LoginForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { login } = useUser();
+    const {login} = useUser();
     const navigate = useNavigate();
     const location = useLocation();
-    const from = location.state?.from || { pathname: "/profile" };
+    const from = location.state?.from || {pathname: "/profile"};
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -193,14 +164,11 @@ const LoginForm = () => {
         setIsSubmitting(true);
 
         try {
-            // POST /api/auth/authenticate
-            const response = await baseClient.post(`${API_URL}/authenticate`, { email, password });
-
-            // 2. Зберігаємо токен у контекст і стейт
+            const response = await baseClient.post(`${API_URL}/authenticate`, {email, password});
             const token = response.data.token;
             await login(token);
 
-            navigate(from, { replace: true });
+            navigate(from, {replace: true});
 
         } catch (err) {
             if (err.response?.status === 403 || err.response?.status === 401) {
@@ -246,13 +214,10 @@ const LoginForm = () => {
     );
 };
 
-// ----------------------------------------------------------------------
-// 3. ГОЛОВНИЙ КОМПОНЕНТ AUTH.JSX
-// ----------------------------------------------------------------------
 function Auth() {
     const location = useLocation();
     const isLoginMode = location.pathname === '/login';
-    const { authData } = useUser();
+    const {authData} = useUser();
 
     if (authData.isAuthenticated) {
         return <div className="text-center p-10">
@@ -279,7 +244,7 @@ function Auth() {
                 </div>
 
                 <div className="py-4">
-                    {isLoginMode ? <LoginForm /> : <RegisterForm />}
+                    {isLoginMode ? <LoginForm/> : <RegisterForm/>}
                 </div>
 
             </div>

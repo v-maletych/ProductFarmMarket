@@ -13,6 +13,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 import java.util.Arrays;
 
 @Configuration
@@ -33,24 +34,15 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-
-                // === КРИТИЧНЕ ВИПРАВЛЕННЯ: Дозволяємо публічні шляхи ===
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Аутентифікація: /api/auth/**
                         .requestMatchers("/api/auth/**").permitAll()
-                        // 2. Публічні дані каталогу: GET /api/products, /api/categories, /api/reviews
                         .requestMatchers("/api/products", "/api/products/**",
                                 "/api/categories", "/api/categories/**",
                                 "/api/reviews").permitAll()
                         .requestMatchers("/images/**").permitAll()
-
-                        // 2. Дозволяємо завантаження (краще захистити, але для тестів можна відкрити або лишити authenticated)
-                        .requestMatchers("/api/upload").authenticated() // Тільки для тих хто увійшов
-                        // 3. Усі інші запити вимагають аутентифікації
+                        .requestMatchers("/api/upload").authenticated()
                         .anyRequest().authenticated()
                 )
-
-                // === КРИТИЧНЕ ВИПРАВЛЕННЯ: Сесія та JWT ===
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -61,7 +53,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // ДОЗВОЛЕНО ДЛЯ DOCKER/LOCALHOST FIX
         configuration.setAllowedOrigins(Arrays.asList("http://localhost", "http://localhost:3000"));
 
         configuration.addAllowedMethod("*");

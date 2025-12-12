@@ -3,12 +3,12 @@ package com.productfarmmarket.model;
 import com.productfarmmarket.enums.Raiting;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-import java.time.LocalDateTime; // <--- ПРАВИЛЬНИЙ ІМПОРТ
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reviews")
 public class Review {
-    // ... (поля id, product, user, raiting залишаються без змін) ...
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "review_id")
@@ -27,21 +27,54 @@ public class Review {
 
     private String comment;
 
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createdAt; // <--- Змінено з Timestamp
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
 
-    // Геттери та Сеттери...
-    // (Додайте їх для всіх полів)
-    public Long getReviewId() { return reviewId; }
-    public void setReviewId(Long reviewId) { this.reviewId = reviewId; }
-    public Product getProduct() { return product; }
-    public void setProduct(Product product) { this.product = product; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-    public Raiting getRaiting() { return raiting; }
-    public void setRaiting(Raiting raiting) { this.raiting = raiting; }
-    public String getComment() { return comment; }
-    public void setComment(String comment) { this.comment = comment; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getReviewId() {
+        return reviewId;
+    }
+
+    public void setReviewId(Long reviewId) {
+        this.reviewId = reviewId;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Raiting getRaiting() {
+        return raiting;
+    }
+
+    public void setRaiting(Raiting raiting) {
+        this.raiting = raiting;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

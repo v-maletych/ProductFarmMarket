@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, {useState, useEffect, useMemo} from 'react';
+import {useParams, Link} from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { getAxiosClient } from '../api/axiosClient';
+import {getAxiosClient} from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
-// Об'єкт, який ми використовуємо для відображення назв.
-// Залишаємо лише ті, які нам потрібні, або ті, які були в мок-даних.
 const MOCK_SUBCAT_TRANSLATIONS = {
     apples: "🍎 Яблука", pears: "🍐 Груші", tomatoes: "🍅 Томати",
     potatoes: "🥔 Картопля", meat: "🥩 М'ясо", eggs: "🥚 Яйця",
@@ -13,7 +11,7 @@ const MOCK_SUBCAT_TRANSLATIONS = {
 };
 
 const Products = () => {
-    const { categoryName } = useParams();
+    const {categoryName} = useParams();
     const client = getAxiosClient();
 
     const [allProducts, setAllProducts] = useState([]);
@@ -23,14 +21,9 @@ const Products = () => {
     const [error, setError] = useState(null);
     const [activeSubcategory, setActiveSubcategory] = useState('all');
     const [sortOption, setSortOption] = useState('default');
-
-    // ------------------------------------------------------------------
-    // 1. ЗАВАНТАЖЕННЯ ДАНИХ З API (Products та Categories)
-    // ------------------------------------------------------------------
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                // Завантажуємо всі продукти та всі категорії
                 const productsRes = await client.get('/api/products');
                 setAllProducts(productsRes.data);
 
@@ -68,8 +61,6 @@ const Products = () => {
             const targetId = targetCategory.categoryId;
             result = result.filter(p => p.categoryId === targetId);
         }
-
-        // --- СОРТУВАННЯ ---
         if (sortOption === 'cheap') {
             result.sort((a, b) => a.price - b.price);
         } else if (sortOption === 'expensive') {
@@ -80,8 +71,6 @@ const Products = () => {
 
         return result;
     }, [allProducts, targetCategory, activeSubcategory, sortOption]);
-
-    // 🔥 ВИПРАВЛЕННЯ: ЗАЛИШАЄМО ЛИШЕ 'all'
     const availableSubcategories = useMemo(() => {
         return ['all'];
     }, [processedProducts]);
@@ -92,7 +81,9 @@ const Products = () => {
     };
 
     if (isLoading) {
-        return <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div><p className="mt-4 text-gray-600">Завантаження каталогу...</p></div>;
+        return <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 inline-block"></div>
+            <p className="mt-4 text-gray-600">Завантаження каталогу...</p></div>;
     }
 
     if (error) {
@@ -111,7 +102,8 @@ const Products = () => {
                         <h3 className="text-xl font-bold mb-4 text-gray-800 shrink-0">Відділи</h3>
                         <ul className="space-y-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">
                             <li>
-                                <Link to="/products" className={`block px-4 py-2 rounded-lg transition ${!categoryName ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                                <Link to="/products"
+                                      className={`block px-4 py-2 rounded-lg transition ${!categoryName ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                                     📦 Всі товари
                                 </Link>
                             </li>
@@ -120,8 +112,10 @@ const Products = () => {
                                 const isActive = categoryName === slug;
                                 return (
                                     <li key={cat.categoryId}>
-                                        <Link to={`/products/${slug}`} className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${isActive ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                            <div className="w-6 h-6 rounded-full bg-gray-200 object-cover flex items-center justify-center text-sm">{cat.name.charAt(0)}</div>
+                                        <Link to={`/products/${slug}`}
+                                              className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${isActive ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                                            <div
+                                                className="w-6 h-6 rounded-full bg-gray-200 object-cover flex items-center justify-center text-sm">{cat.name.charAt(0)}</div>
                                             <span className="font-medium">{cat.name}</span>
                                         </Link>
                                     </li>
@@ -132,7 +126,8 @@ const Products = () => {
                 </aside>
 
                 <main className="w-full md:w-3/4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b-2 border-lime-300 pb-3">
+                    <div
+                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b-2 border-lime-300 pb-3">
                         <h1 className="text-3xl font-black text-gray-800">
                             {getCategoryTitle(categoryName)}
                         </h1>
@@ -148,8 +143,6 @@ const Products = () => {
                             <option value="name">За назвою (А-Я)</option>
                         </select>
                     </div>
-
-                    {/* 🔥 ЦЕЙ БЛОК ПОВИНЕН ЗНИКНУТИ, ОСКІЛЬКИ availableSubcategories.length буде 1 🔥 */}
                     {availableSubcategories.length > 1 && (
                         <div className="mb-8 flex flex-wrap gap-3">
                             {availableSubcategories.map(sub => (
@@ -171,14 +164,15 @@ const Products = () => {
                     {processedProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {processedProducts.map(product => (
-                                <ProductCard key={product.productId} product={product} />
+                                <ProductCard key={product.productId} product={product}/>
                             ))}
                         </div>
                     ) : (
                         <div className="text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-300">
                             <p className="text-gray-400 text-xl mb-4">В цій категорії поки порожньо...</p>
                             {categoryName && (
-                                <Link to="/products" className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition shadow-lg inline-block">
+                                <Link to="/products"
+                                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full transition shadow-lg inline-block">
                                     Перейти до всіх товарів
                                 </Link>
                             )}

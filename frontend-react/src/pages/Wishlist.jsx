@@ -1,10 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import {Link} from 'react-router-dom';
+import {useUser} from '../context/UserContext';
 import ProductCard from '../components/ProductCard';
 
 const Wishlist = () => {
-    const { user, isLoading } = useUser(); // <-- Використовуємо isLoading
+    const {user, isLoading} = useUser();
 
     if (isLoading) {
         return (
@@ -13,8 +13,6 @@ const Wishlist = () => {
             </div>
         );
     }
-
-    // Перевірка на аутентифікацію
     if (!user) {
         return (
             <div className="container mx-auto px-4 py-20 text-center">
@@ -30,15 +28,14 @@ const Wishlist = () => {
     return (
         <div className="container mx-auto px-4 py-10">
             <h1 className="text-3xl font-black text-gray-800 mb-8 border-b pb-4">
-                ❤️ Мої бажання {wishlistItems.length > 0 && <span className="text-gray-400 text-xl">({wishlistItems.length})</span>}
+                ❤️ Мої бажання {wishlistItems.length > 0 &&
+                <span className="text-gray-400 text-xl">({wishlistItems.length})</span>}
             </h1>
 
             {wishlistItems.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {wishlistItems.map(product => (
-                        // УВАГА: Тут маппінг product.id на ProductCard повинен використовувати
-                        // поля DTO, які повертає бекенд (product.productId, product.name і т.д.)
-                        <ProductCard key={product.userId} product={product} />
+                        <ProductCard key={product.userId} product={product}/>
                     ))}
                 </div>
             ) : (

@@ -4,7 +4,7 @@ import com.productfarmmarket.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
 
-@Service("productOwnershipService") // Вказуємо назву біна для SpEL
+@Service("productOwnershipService")
 public class ProductOwnershipService {
 
     private final ProductRepository productRepository;
@@ -13,11 +13,7 @@ public class ProductOwnershipService {
         this.productRepository = productRepository;
     }
 
-    /**
-     * Перевіряє, чи є користувач (за userId) власником продукту (за productId).
-     */
     public boolean isOwner(Long productId, Long userId) {
-        // Отримуємо продукт і порівнюємо ID власника
         return productRepository.findById(productId)
                 .map(product -> product.getUser() != null && product.getUser().getUserId().equals(userId))
                 .orElse(false);

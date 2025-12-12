@@ -1,38 +1,31 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, {createContext, useState, useContext, useEffect} from 'react';
 import toast from 'react-hot-toast';
-import { useUser } from './UserContext'; // Імпортуємо юзера, щоб знати його ID
+import {useUser} from './UserContext';
 
 const CartContext = createContext();
 
-export const CartProvider = ({ children }) => {
-    const { authData } = useUser(); // Отримуємо дані про авторизацію
-
-    // Формуємо унікальний ключ для кошика
-    // Якщо користувач увійшов -> 'cart_1', 'cart_2'
-    // Якщо гість -> 'cart_guest'
+export const CartProvider = ({children}) => {
+    const {authData} = useUser();
     const cartKey = authData.isAuthenticated && authData.userId
         ? `farmmarket_cart_${authData.userId}`
         : `farmmarket_cart_guest`;
 
-    // Стан кошика
     const [cartItems, setCartItems] = useState([]);
 
-    // 1. ЗАВАНТАЖЕННЯ: При зміні user (ключа) завантажуємо правильний кошик
     useEffect(() => {
         try {
             const storedCart = localStorage.getItem(cartKey);
             if (storedCart) {
                 setCartItems(JSON.parse(storedCart));
             } else {
-                setCartItems([]); // Якщо для цього юзера немає даних — пустий масив
+                setCartItems([]);
             }
         } catch (error) {
             console.error("Помилка завантаження кошика:", error);
             setCartItems([]);
         }
-    }, [cartKey]); // <-- Спрацьовує, коли змінюється юзер
+    }, [cartKey]);
 
-    // 2. ЗБЕРЕЖЕННЯ: При зміні товарів зберігаємо у поточний ключ
     useEffect(() => {
         try {
             if (cartItems.length > 0 || localStorage.getItem(cartKey)) {
@@ -43,15 +36,13 @@ export const CartProvider = ({ children }) => {
         }
     }, [cartItems, cartKey]);
 
-    // --- ЛОГІКА ДОДАВАННЯ/ЗМІНИ (Залишається такою ж) ---
     const updateQuantityInternal = (prevItems, productId, delta) => {
         return prevItems.map(item =>
-            item.productId === productId ? { ...item, quantity: item.quantity + delta } : item
+            item.productId === productId ? {...item, quantity: item.quantity + delta} : item
         );
     };
 
     const addToCart = (product) => {
-        // УВАГА: Використовуємо productId для порівняння
         const pId = product.productId || product.id;
 
         setCartItems((prevItems) => {
@@ -60,10 +51,9 @@ export const CartProvider = ({ children }) => {
                 toast.success(`Кількість збільшено: ${product.name}`);
                 return updateQuantityInternal(prevItems, pId, 1);
             }
-            // Зберігаємо важливі поля
             const newItem = {
-                productId: pId, // Нормалізуємо ID
-                id: pId,        // Для сумісності
+                productId: pId,
+                id: pId,
                 name: product.name,
                 price: product.price,
                 image: product.image,
