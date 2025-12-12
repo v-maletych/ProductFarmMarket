@@ -9,7 +9,5 @@ import java.util.Optional;
 
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Integer> {
-
-    // Метод для пошуку ролі за типом (ENUM)
     Optional<Role> findByType(RoleType type);
 }

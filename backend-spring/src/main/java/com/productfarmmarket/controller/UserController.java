@@ -19,14 +19,11 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // --- Допоміжний метод для обробки Not Found ---
     private User findUserOrThrow(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id " + id));
     }
 
-
-    // Отримання всіх користувачів - ТІЛЬКИ ADMIN
     @GetMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public List<UserResponse> getAllUsers() {
@@ -36,15 +33,12 @@ public class UserController {
                 .collect(Collectors.toList());
     }
 
-    // Створення користувача (не для реєстрації) - ТІЛЬКИ ADMIN
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public UserResponse createUser(@RequestBody User user) {
-        // УВАГА: У реальному застосунку тут треба хешувати пароль!
         return new UserResponse(userRepository.save(user));
     }
 
-    // Отримання користувача за ID - ADMIN або САМ КОРИСТУВАЧ
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or #id == authentication.principal.userId")
     public UserResponse getUserById(@PathVariable Long id) {
@@ -52,25 +46,19 @@ public class UserController {
         return new UserResponse(user);
     }
 
-    // Оновлення користувача - ADMIN або САМ КОРИСТУВАЧ
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or #id == authentication.principal.userId")
     public UserResponse updateUser(@PathVariable Long id, @RequestBody User user) {
 
         User existingUser = findUserOrThrow(id);
 
-        // 1. ОНОВЛЮЄМО ЛИШЕ ДОЗВОЛЕНІ ПОЛЯ (ІГНОРУЮЧИ EMAIL ТА PASSWD)
         existingUser.setFirstName(user.getFirstName());
         existingUser.setLastName(user.getLastName());
         existingUser.setNumberPhone(user.getNumberPhone());
 
-        // 2. ЗБЕРІГАЄМО
-        // Примітка: Оскільки email та passwd не оновлюються, конфлікт унікальності
-        // або скидання пароля не відбудеться.
         return new UserResponse(userRepository.save(existingUser));
     }
 
-    // Видалення користувача - ADMIN або САМ КОРИСТУВАЧ
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or #id == authentication.principal.userId")
     public void deleteUser(@PathVariable Long id) {

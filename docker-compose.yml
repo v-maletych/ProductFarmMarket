@@ -3,7 +3,6 @@ version: '3.8'
 services:
 
   db:
-    # Використовуємо конкретну стабільну версію для надійності
     image: postgres:14-alpine
     restart: always
     environment:
@@ -11,7 +10,6 @@ services:
       POSTGRES_PASSWORD: marketplace
       POSTGRES_USER: marketplace_user
     volumes:
-      # Змінюємо ім'я volume для уникнення конфлікту зі старими даними
       - db-data:/var/lib/postgresql/data
     networks:
       - app-network
@@ -22,7 +20,6 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      # URL залишається коректним: jdbc:postgresql://<service_name>:<port>/<db_name>
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/productfarmmarket
       SPRING_DATASOURCE_USERNAME: marketplace_user
       SPRING_DATASOURCE_PASSWORD: marketplace
@@ -31,7 +28,6 @@ services:
     networks:
       - app-network
     volumes:
-      # Мапимо папку uploads у контейнері на папку uploads на вашому комп'ютері
       - ./uploads:/app/uploads
 
   frontend:
@@ -48,5 +44,4 @@ networks:
     driver: bridge
 
 volumes:
-  # Оголошення нового volume
   db-data:

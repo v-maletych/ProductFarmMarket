@@ -1,20 +1,13 @@
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import {toast} from 'react-hot-toast';
 
-// ВИПРАВЛЕНО: Встановлюємо базовий URL на корінь '/'.
-// Це дозволяє запитам з контекстів (наприклад, '/api/products')
-// коректно працювати з Nginx Proxy, який перенаправляє /api/ на бекенд.
 const API_URL = '/';
-
-// 1. Створюємо клієнт Axios без перехоплювачів
 const baseClient = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
 });
-
-// 2. Створюємо функцію для отримання клієнта з JWT-перехоплювачем
 export const getAxiosClient = () => {
     const token = localStorage.getItem('jwtToken');
 
@@ -22,21 +15,17 @@ export const getAxiosClient = () => {
         baseURL: API_URL,
         headers: {
             'Content-Type': 'application/json',
-            // Додаємо Bearer Token
-            ...(token && { 'Authorization': `Bearer ${token}` })
+            ...(token && {'Authorization': `Bearer ${token}`})
         }
     });
-
-    // Додаємо перехоплювач відповідей для автоматичного виходу при 401/403
     client.interceptors.response.use(
         response => response,
         error => {
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                // Якщо токен недійсний або немає прав, очищаємо токен
                 localStorage.removeItem('jwtToken');
                 localStorage.removeItem('currentUser');
                 toast.error("Сесія закінчилася або недостатньо прав.");
-                window.location.href = '/login'; // Перенаправляємо на сторінку входу
+                window.location.href = '/login';
             }
             return Promise.reject(error);
         }
@@ -45,5 +34,4 @@ export const getAxiosClient = () => {
     return client;
 };
 
-// Експортуємо клієнт для логіну/реєстрації (де токена ще немає)
 export default baseClient;

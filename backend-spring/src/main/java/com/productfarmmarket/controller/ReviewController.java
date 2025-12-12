@@ -11,9 +11,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-// ...
+
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -24,9 +25,6 @@ public class ReviewController {
     @Autowired
     private UserRepository userRepository;
 
-    // ... (існуючі методи: getAllReviews, createReview, getReviewById залишаємо без змін)
-
-    // 🔥 НОВИЙ МЕТОД: Отримання відгуків для поточного фермера
     @GetMapping("/my-products")
     @PreAuthorize("hasAnyAuthority('FARMER', 'ADMIN')")
     public List<Review> getMyProductReviews() {
@@ -37,7 +35,8 @@ public class ReviewController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return reviewRepository.findByProduct_User_UserId(currentUser.getUserId());
-    } // Отримання всіх відгуків - ДОСТУПНО УСІМ (Публічні дані)
+    }
+
     @GetMapping
     public List<Review> getAllReviews() {
         return reviewRepository.findAll();
@@ -48,7 +47,6 @@ public class ReviewController {
         return reviewRepository.findByProduct_User_UserId(sellerId);
     }
 
-    // Додавання нового відгуку - ЛИШЕ АВТЕНТИФІКОВАНИЙ
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Review createReview(@RequestBody Review review) {
@@ -58,23 +56,19 @@ public class ReviewController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         review.setUser(currentUser);
-        review.setCreatedAt(java.time.LocalDateTime.now()); // <--- ВСТАНОВЛЮЄМО ЧАС
+        review.setCreatedAt(java.time.LocalDateTime.now());
 
-        // Важливо: завантажте Product з БД, щоб не було помилок
-        if(review.getProduct() != null && review.getProduct().getProductId() != null) {
-            // Тут можна додати перевірку на існування продукту
+        if (review.getProduct() != null && review.getProduct().getProductId() != null) {
         }
 
         return reviewRepository.save(review);
     }
 
-    // Отримання відгуку за ID - ДОСТУПНО УСІМ
     @GetMapping("/{id}")
     public Review getReviewById(@PathVariable Long id) {
         return reviewRepository.findById(id).orElseThrow(() -> new RuntimeException("Review not found"));
     }
 
-    // Оновлення відгуку - АДМІН АБО ВЛАСНИК
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or @reviewOwnershipService.isOwner(#id, principal.userId)")
     public Review updateReview(@PathVariable Long id, @RequestBody Review review) {
@@ -84,7 +78,6 @@ public class ReviewController {
         return reviewRepository.save(existingReview);
     }
 
-    // Видалення відгуку - АДМІН АБО ВЛАСНИК
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN') or @reviewOwnershipService.isOwner(#id, principal.userId)")
     public void deleteReview(@PathVariable Long id) {

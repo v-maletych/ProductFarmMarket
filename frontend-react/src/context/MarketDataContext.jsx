@@ -1,25 +1,20 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getAxiosClient } from '../api/axiosClient';
-import { toast } from 'react-hot-toast';
+import React, {createContext, useState, useEffect, useContext} from 'react';
+import {getAxiosClient} from '../api/axiosClient';
+import {toast} from 'react-hot-toast';
 
 const MarketDataContext = createContext();
 
-export const MarketDataProvider = ({ children }) => {
+export const MarketDataProvider = ({children}) => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loadingData, setLoadingData] = useState(true);
     const [errorData, setErrorData] = useState(null);
     const client = getAxiosClient();
-
-    // 1. Функція завантаження публічних даних
     const fetchMarketData = async () => {
         setLoadingData(true);
         setErrorData(null);
         try {
-            // ВИПРАВЛЕНО: Додано префікс /api
             const productsRes = await client.get('/api/products');
-
-            // ВИПРАВЛЕНО: Додано префікс /api
             const categoriesRes = await client.get('/api/categories');
 
             setProducts(productsRes.data || []);

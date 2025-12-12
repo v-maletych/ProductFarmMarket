@@ -25,7 +25,6 @@ public class WishlistController {
     @Autowired
     private ProductRepository productRepository;
 
-    // 🔥 ГОЛОВНИЙ МЕТОД: TOGGLE (Додати/Видалити)
     @PostMapping("/toggle/{productId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> toggleWishlist(@PathVariable Long productId) {
@@ -34,15 +33,12 @@ public class WishlistController {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Перевіряємо, чи є вже в списку
         Optional<Wishlist> existingItem = wishlistRepository.findByUserAndProduct(user, product);
 
         if (existingItem.isPresent()) {
-            // ЯКЩО Є -> ВИДАЛЯЄМО
             wishlistRepository.delete(existingItem.get());
             return ResponseEntity.ok("REMOVED");
         } else {
-            // ЯКЩО НЕМАЄ -> ДОДАЄМО
             Wishlist newItem = new Wishlist();
             newItem.setUser(user);
             newItem.setProduct(product);

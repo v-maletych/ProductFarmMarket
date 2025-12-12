@@ -10,9 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-
-    // КРИТИЧНЕ ВИПРАВЛЕННЯ: Використовуємо FETCH JOIN для примусового EAGER завантаження Role
-    // Це забезпечує, що UserDetails (а отже, роль) може бути використаний JWT-фільтром
     @Query("SELECT u FROM User u JOIN FETCH u.role r WHERE u.email = :email")
     Optional<User> findByEmail(@Param("email") String email);
 }
