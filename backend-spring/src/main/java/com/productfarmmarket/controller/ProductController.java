@@ -87,4 +87,11 @@ public class ProductController {
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
         productRepository.delete(product);
     }
+
+    @GetMapping("/seller/{sellerId}")
+    public List<ProductResponse> getProductsBySeller(@PathVariable Long sellerId) {
+        return productRepository.findByUser_UserId(sellerId).stream()
+                .map(ProductResponse::new)
+                .collect(Collectors.toList());
+    }
 }

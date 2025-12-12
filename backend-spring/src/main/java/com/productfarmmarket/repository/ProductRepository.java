@@ -19,4 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 🔥 КРИТИЧНЕ ВИПРАВЛЕННЯ: Додаємо метод для завантаження ВСІХ продуктів з Category та User
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.user u LEFT JOIN FETCH p.category c")
     List<Product> findAllWithDetails();
+
+    List<Product> findByUser_UserId(Long userId);
 }

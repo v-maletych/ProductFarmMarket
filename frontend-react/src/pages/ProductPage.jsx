@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FaStar } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
@@ -7,11 +7,10 @@ import { getAxiosClient } from '../api/axiosClient';
 import toast from 'react-hot-toast';
 
 // -----------------------------------------------------------
-// 💡 КОМПОНЕНТИ-УТИЛІТИ
+// 💡 КОМПОНЕНТИ-УТИЛІТИ (Зірочки)
 // -----------------------------------------------------------
 
 const StarRatingDisplay = ({ rating, size = 18 }) => {
-    // Обробка рейтингу, якщо він приходить як об'єкт ENUM або число
     let normalizedRating = 0;
     if (typeof rating === 'number') {
         normalizedRating = rating;
@@ -48,7 +47,6 @@ const calculateAvgRating = (reviews) => {
     }
     const total = reviews.reduce((sum, review) => {
         let val = 0;
-        // Конвертація ENUM в число для підрахунку
         if (typeof review.raiting === 'number') val = review.raiting;
         else if (review.raiting === 'FIVE') val = 5;
         else if (review.raiting === 'FOUR') val = 4;
@@ -89,13 +87,11 @@ const ProductPage = () => {
         setError(null);
 
         try {
-            // 1. Завантаження продукту (ДОДАНО /api)
+            // 1. Завантаження продукту
             const productRes = await client.get(`/api/products/${productId}`);
             setProduct(productRes.data);
 
-            // 2. Завантаження відгуків (ДОДАНО /api)
-            // Оскільки у нас немає окремого методу пошуку по ID продукту на бекенді,
-            // ми завантажуємо всі і фільтруємо тут (це стабільне рішення для поточного бекенду)
+            // 2. Завантаження відгуків
             const reviewsRes = await client.get('/api/reviews');
 
             // Фільтруємо відгуки саме для цього товару
@@ -110,7 +106,7 @@ const ProductPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [productId]); // client видалено з залежностей, щоб уникнути циклів
+    }, [productId]);
 
     useEffect(() => {
         fetchProductAndReviews();
@@ -135,7 +131,6 @@ const ProductPage = () => {
         setIsSubmitting(true);
 
         try {
-            // Конвертуємо число в ENUM для бекенду
             const ratingEnum =
                 newReview.raitingValue === 5 ? 'FIVE' :
                     newReview.raitingValue === 4 ? 'FOUR' :
@@ -143,15 +138,14 @@ const ProductPage = () => {
                             newReview.raitingValue === 2 ? 'TWO' : 'ONE';
 
             const reviewData = {
-                product: { productId: productId }, // Важливо: об'єкт product
+                product: { productId: productId },
                 raiting: ratingEnum,
                 comment: newReview.comment,
             };
 
-            // ДОДАНО /api
             await client.post('/api/reviews', reviewData);
 
-            await fetchProductAndReviews(); // Оновлюємо список
+            await fetchProductAndReviews();
 
             setNewReview({ raitingValue: 5, comment: '' });
             toast.success('Відгук успішно додано!');
@@ -159,7 +153,6 @@ const ProductPage = () => {
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Не вдалося додати відгук.';
             toast.error(`Помилка: ${errorMessage}`);
-            console.error("Review submission error:", err);
         } finally {
             setIsSubmitting(false);
         }
@@ -197,7 +190,20 @@ const ProductPage = () => {
 
                 {/* 2. Деталі продукту */}
                 <div className="flex flex-col justify-center">
-                    <span className="text-green-600 font-bold text-sm tracking-wider uppercase mb-2">{product.category?.name || 'Продукти'}</span>
+
+                    {/* Категорія */}
+                    <span className="text-green-600 font-bold text-sm tracking-wider uppercase mb-1">
+                        {product.categoryName || product.category?.name || 'Продукти'}
+                    </span>
+
+                    {/* 🔥 ПОСИЛАННЯ НА ПРОДАВЦЯ (ТУТ ВОНО ДОДАНО) 🔥 */}
+                    {product.ownerId && (
+                        <Link to={`/seller/${product.ownerId}`} className="flex items-center gap-2 mb-3 text-sm text-gray-500 hover:text-green-600 transition group w-fit">
+                            <span className="bg-gray-100 group-hover:bg-green-100 p-1 rounded-full text-xs">👤</span>
+                            <span className="font-semibold">Продавець: <span className="underline group-hover:no-underline">{product.ownerName}</span></span>
+                        </Link>
+                    )}
+
                     <h1 className="text-4xl font-black text-gray-800 mb-4">{product.name}</h1>
                     <p className="text-gray-600 text-lg mb-6 leading-relaxed">{product.description || 'Опис відсутній.'}</p>
 
@@ -238,7 +244,7 @@ const ProductPage = () => {
 
                 {authData.isAuthenticated ? (
                     <div className="mb-10 bg-gray-50 p-6 rounded-xl">
-                        <h4 className="font-bold text-gray-700 mb-4">Залишити відгук</h4>
+                        <h4 className="font-bold text-gray-700 mb-4">Залишити відгук про цей товар</h4>
                         <form onSubmit={handleSubmitReview}>
                             <div className="mb-4 flex items-center">
                                 <span className="text-sm text-gray-500 mr-3">Ваша оцінка:</span>
@@ -287,7 +293,7 @@ const ProductPage = () => {
                                 <div className="flex items-start justify-between mb-2">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-lg uppercase">
-                                            {review.user?.firstName?.charAt(0) || 'А'}
+                                            {review.user?.firstName?.charAt(0) || '👤'}
                                         </div>
                                         <div>
                                             <p className="font-bold text-gray-800">{review.user?.firstName || 'Анонім'} {review.user?.lastName}</p>
