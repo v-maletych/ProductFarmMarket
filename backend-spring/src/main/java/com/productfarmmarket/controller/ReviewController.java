@@ -11,6 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+// ...
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -21,10 +24,28 @@ public class ReviewController {
     @Autowired
     private UserRepository userRepository;
 
-    // Отримання всіх відгуків - ДОСТУПНО УСІМ (Публічні дані)
+    // ... (існуючі методи: getAllReviews, createReview, getReviewById залишаємо без змін)
+
+    // 🔥 НОВИЙ МЕТОД: Отримання відгуків для поточного фермера
+    @GetMapping("/my-products")
+    @PreAuthorize("hasAnyAuthority('FARMER', 'ADMIN')")
+    public List<Review> getMyProductReviews() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return reviewRepository.findByProduct_User_UserId(currentUser.getUserId());
+    } // Отримання всіх відгуків - ДОСТУПНО УСІМ (Публічні дані)
     @GetMapping
     public List<Review> getAllReviews() {
         return reviewRepository.findAll();
+    }
+
+    @GetMapping("/seller/{sellerId}")
+    public List<Review> getReviewsBySeller(@PathVariable Long sellerId) {
+        return reviewRepository.findByProduct_User_UserId(sellerId);
     }
 
     // Додавання нового відгуку - ЛИШЕ АВТЕНТИФІКОВАНИЙ

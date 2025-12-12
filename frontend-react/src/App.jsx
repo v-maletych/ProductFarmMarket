@@ -21,6 +21,7 @@ import Profile from './pages/Profile.jsx';
 import Wishlist from './pages/Wishlist.jsx';
 import FarmerDashboard from './pages/FarmerDashboard';
 import ProductForm from './pages/ProductForm';
+import SellerProfile from './pages/SellerProfile';
 
 
 // -----------------------------------------------------------------------------
@@ -83,6 +84,7 @@ export default function App() {
                     <Route path="/about" element={<About />} />
                     <Route path="/cart" element={<Cart />} />
 
+                    <Route path="/seller/:id" element={<SellerProfile />} />
                     {/* Аутентифікація */}
                     <Route path="/login" element={<Auth />} />
                     <Route path="/register" element={<Auth />} />
